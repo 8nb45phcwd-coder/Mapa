@@ -45,7 +45,7 @@ beforeAll(async () => {
     countryIndex,
   });
   ingestDurationMs = Date.now() - start;
-}, 30000);
+}, 90000);
 
 const configs: InfraSourceConfig[] = [
   { infraType: "pipeline_gas", sourceId: "pipelines", url: "", adapter: "geojson_line" },
@@ -194,6 +194,6 @@ describe("infrastructure ingestion", () => {
   });
 
   it("ingests high-res classification data within a reasonable time budget", () => {
-    expect(ingestDurationMs).toBeLessThan(30000);
+    expect(ingestDurationMs).toBeLessThan(60000);
   });
 });

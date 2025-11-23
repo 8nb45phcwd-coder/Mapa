@@ -15,7 +15,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["engine/tests/**/*.test.ts", "ingestion/tests/**/*.test.ts"],
+    include: [
+      "engine/tests/**/*.test.ts",
+      "ingestion/tests/**/*.test.ts",
+      "world_model/tests/**/*.test.ts",
+    ],
     typecheck: {
       tsconfig: "tsconfig.vitest.json",
     },

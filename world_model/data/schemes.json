@@ -1,0 +1,98 @@
+{
+  "schemes": [
+    {
+      "id": "world_system_position",
+      "label": "World-System Position",
+      "exclusive": true,
+      "groups": [
+        "core_imperialist",
+        "core_dependent",
+        "semi_periphery",
+        "periphery_extractive",
+        "socialist_or_anti_imperialist"
+      ]
+    },
+    {
+      "id": "global_north_south",
+      "label": "Global North / South",
+      "exclusive": true,
+      "groups": [
+        "global_north",
+        "global_south",
+        "transitional_or_ambiguous"
+      ]
+    },
+    {
+      "id": "geo_political_blocs",
+      "label": "Geopolitical Blocs",
+      "exclusive": false,
+      "groups": [
+        "nato",
+        "eu_core",
+        "eu_periphery",
+        "five_eyes",
+        "g7",
+        "quad",
+        "mnna",
+        "brics",
+        "sco"
+      ]
+    },
+    {
+      "id": "economic_blocs",
+      "label": "Economic Blocs",
+      "exclusive": false,
+      "groups": [
+        "eu_customs_union",
+        "eea",
+        "mercosur",
+        "asean",
+        "gcc",
+        "usmca",
+        "afcfta",
+        "opec",
+        "bri"
+      ]
+    },
+    {
+      "id": "financial_structures",
+      "label": "Financial / Legal Structures",
+      "exclusive": false,
+      "groups": [
+        "imf_program",
+        "imf_creditor",
+        "wto_member",
+        "bis_member",
+        "fatf_grey",
+        "fatf_black",
+        "tax_haven"
+      ]
+    },
+    {
+      "id": "regional_organizations",
+      "label": "Regional Organizations",
+      "exclusive": false,
+      "groups": [
+        "ecowas",
+        "sadc",
+        "au",
+        "caricom",
+        "celac",
+        "cis",
+        "arab_league"
+      ]
+    },
+    {
+      "id": "currency_systems",
+      "label": "Currency Systems",
+      "exclusive": false,
+      "groups": [
+        "usd_formal",
+        "usd_informal",
+        "euro_formal",
+        "euro_informal",
+        "yuan_integration"
+      ]
+    }
+  ]
+}

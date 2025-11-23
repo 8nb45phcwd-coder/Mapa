@@ -2,11 +2,11 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "declaration": true,
     "composite": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "data/**/*"],
   "exclude": ["dist", "node_modules"],
   "references": [{ "path": "../engine" }]
 }

@@ -17,7 +17,8 @@
     "ingestion/src/**/*",
     "world_model/src/**/*",
     "engine/tests/**/*",
-    "ingestion/tests/**/*"
+    "ingestion/tests/**/*",
+    "world_model/tests/**/*"
   ],
   "exclude": ["**/dist", "node_modules"]
 }
