@@ -61,25 +61,36 @@ export function applyConceptLayout(
   const slot = layout.slots.find((s) => s.slot_id === assignment.slot_id);
   if (!slot) throw new Error(`Slot ${assignment.slot_id} not found in layout ${layout.layout_id}`);
   const slotCenter: [number, number] = [slot.x + slot.w / 2, slot.y + slot.h / 2];
-  if (clusterEnvelope) {
-    const layoutType = clusterEnvelope.layout_type || "stack";
-    const offsetLocal = computeClusterLayoutOffset(
-      layoutType,
-      clusterEnvelope.memberIndex ?? 0,
-      clusterEnvelope.memberCount ?? 1
-    );
-    const scaledOffset: [number, number] = [
-      offsetLocal[0] * clusterEnvelope.radius,
-      offsetLocal[1] * clusterEnvelope.radius,
-    ];
-    rc.conceptual_pos = [
-      clusterEnvelope.center_concept[0] + scaledOffset[0],
-      clusterEnvelope.center_concept[1] + scaledOffset[1],
-    ];
-  } else {
-    rc.conceptual_pos = slotCenter;
-  }
-  rc.screen_pos = rc.conceptual_pos;
+  const targetConceptPos: [number, number] = (() => {
+    if (clusterEnvelope) {
+      const layoutType = clusterEnvelope.layout_type || "stack";
+      const offsetLocal = computeClusterLayoutOffset(
+        layoutType,
+        clusterEnvelope.memberIndex ?? 0,
+        clusterEnvelope.memberCount ?? 1
+      );
+      const scaledOffset: [number, number] = [
+        offsetLocal[0] * clusterEnvelope.radius,
+        offsetLocal[1] * clusterEnvelope.radius,
+      ];
+      return [
+        clusterEnvelope.center_concept[0] + scaledOffset[0],
+        clusterEnvelope.center_concept[1] + scaledOffset[1],
+      ];
+    }
+    return slotCenter;
+  })();
+
+  rc.conceptual_pos = targetConceptPos;
+
+  // Translate the projected geometry so its current center aligns with the conceptual position.
+  const bounds = updateBoundingVolumes(rc);
+  const currentCenter: [number, number] = [bounds.circle_screen.cx, bounds.circle_screen.cy];
+  const offset: [number, number] = [
+    targetConceptPos[0] - currentCenter[0],
+    targetConceptPos[1] - currentCenter[1],
+  ];
+  detachCountry(rc, offset);
 }
 
 /** Translate a country in screen space. */
