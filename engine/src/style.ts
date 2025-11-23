@@ -9,6 +9,7 @@ import type {
 } from "./types.js";
 import type { ProjectionFn } from "./geometry.js";
 import { decodeGeometryByRef, projectGeometry, ProjectedGeometryCache } from "./geometry.js";
+import { ensureSegmentKey, formatBorderSegmentId } from "./borders/types.js";
 
 /** Resolve paint rules for a specific target. Last matching rule wins. */
 export function resolvePaintFor(targetType: PaintTargetType, targetId: string, rules: PaintRule[]): ResolvedStyle {
@@ -36,8 +37,9 @@ export function getBorderSegmentRenderInfo(
   cache?: ProjectedGeometryCache,
   projectionName?: string
 ): BorderSegmentRenderInfo | null {
-  const segment = segments.find((s) => s.segment_id === segment_id);
+  const segment = segments.find((s) => s.segment_id === segment_id || formatBorderSegmentId(s.id) === segment_id);
   if (!segment) return null;
+  ensureSegmentKey(segment);
   const baseStyle: ResolvedStyle = {};
   const style = styles.find((s) => s.segment_id === segment_id);
   if (style) {
@@ -50,12 +52,24 @@ export function getBorderSegmentRenderInfo(
   const merged: ResolvedStyle = { ...baseStyle, ...painted };
   let geometry: any;
   let projectedGeometry: any;
-  if (geometrySource) {
-    geometry = decodeGeometryByRef(geometrySource, segment.geometry_ref);
+  if (geometrySource && (segment as any).geometry_ref) {
+    geometry = decodeGeometryByRef(geometrySource, (segment as any).geometry_ref);
     const geomObj = geometry?.geometry ?? geometry;
     if (geomObj && projection) {
       projectedGeometry = projectGeometry(geomObj, projection, cache, {
-        geometryRef: segment.geometry_ref,
+        geometryRef: (segment as any).geometry_ref,
+        projectionName,
+      });
+    }
+  } else if ((segment as any).geometry?.coords_hi_res) {
+    geometry = {
+      type: "LineString",
+      coordinates: segment.geometry.coords_hi_res,
+    };
+    if (projection) {
+      const geomRef = segment.segment_id ?? formatBorderSegmentId(segment.id);
+      projectedGeometry = projectGeometry(geometry, projection, cache, {
+        geometryRef: geomRef,
         projectionName,
       });
     }

@@ -47,6 +47,7 @@ This document captures the functional and data-model requirements for the world 
 ## 6. Styling & Borders
 - `resolvePaintFor` applies layered `PaintRule`s (last match wins) for countries, regions, clusters, slots, and border segments.
 - `getBorderSegmentRenderInfo` merges explicit `BorderSegmentStyle` with paint rules and optionally decodes/projects segment geometry to deliver render-ready partial-border styling.
+- Border subsystem: high-resolution TopoJSON (50m/10m) is used to extract deterministic `BorderSegment` objects with canonical IDs (`country_a/country_b/index`), coastline segments (`country_b="SEA"`), geodesic lengths, and optional low-res simplifications for LOD. API helpers enumerate all segments, per-country segments, and specific pairs while selecting appropriate geometry for the current zoom.
 
 ## 7. Subdivision
 - `generateSubdivisions` creates synthetic cells per country using `AutoSubdivisionConfig` methods: `grid`, `hex`, or `voronoi`. Cells are produced in geographic coordinates based on the country anchor’s bbox/bounding circle, **clipped against the actual country polygon via polygon clipping**, and a projection helper (`projectSubdivisionCells`) maps them into render space while inheriting country transforms.

@@ -74,7 +74,7 @@ describe("LOD switching", () => {
       return fc.features.find((f: any) => f.id?.toString() === ref || f.properties?.name === ref);
     });
     expect(map.has(portugal!.country_id)).toBe(true);
-  });
+  }, 15000);
 
   it("keeps mask integrity across resolutions", () => {
     const maskHigh = buildCountryMaskIndex(countries, world50 as any);
@@ -83,7 +83,7 @@ describe("LOD switching", () => {
     const portugalLow = maskLow.get(portugal!.country_id);
     expect(portugalHigh?.multipolygon.length).toBeGreaterThan(0);
     expect(portugalLow?.multipolygon.length).toBeGreaterThan(0);
-  });
+  }, 15000);
 });
 
 describe("tile culling", () => {

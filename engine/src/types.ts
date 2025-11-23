@@ -100,15 +100,26 @@ export interface BorderPoint extends Unit {
   flow_types?: string[]; // e.g. ["trade","migration","tourism","military"]
 }
 
+export interface BorderSegmentGeometry {
+  coords_hi_res: [number, number][];
+  coords_low_res?: [number, number][]; // optional simplified geometry for LOD
+}
+
+export interface BorderSegmentId {
+  country_a: CountryID; // lexicographically smaller ISO3
+  country_b: CountryID | "SEA"; // lexicographically larger ISO3 or SEA
+  index: number; // differentiates disjoint segments
+}
+
 export interface BorderSegment {
-  segment_id: SegmentID;
-  countries: [CountryID, CountryID];
-  geometry_ref: string; // polyline that lies on the real border
-  permeability_level?: "open" | "controlled" | "restricted" | "closed";
-  militarization_level?: "low" | "medium" | "high";
-  wall_present?: boolean;
-  legal_status?: "normal" | "disputed" | "dmz" | "temporary_corridor";
-  notes?: string;
+  id: BorderSegmentId;
+  country_a: CountryID;
+  country_b: CountryID | "SEA";
+  geometry: BorderSegmentGeometry;
+  length_km: number;
+  is_maritime?: boolean;
+  // compatibility handle for styling systems that expect a string identifier
+  segment_id?: SegmentID;
 }
 
 export interface BorderSegmentStyle {

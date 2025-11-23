@@ -4,9 +4,12 @@ import type { BorderSegment, BorderSegmentStyle, PaintRule } from "../src/types.
 
 const segments: BorderSegment[] = [
   {
+    id: { country_a: "A", country_b: "B", index: 0 },
+    country_a: "A",
+    country_b: "B",
+    geometry: { coords_hi_res: [[0, 0], [1, 0]], coords_low_res: [[0, 0], [1, 0]] },
+    length_km: 0,
     segment_id: "seg-1",
-    countries: ["A", "B"],
-    geometry_ref: "seg-1",
   },
 ];
 

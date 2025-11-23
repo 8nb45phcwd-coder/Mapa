@@ -7,6 +7,7 @@ Core rendering and layout kernel for the world-map stack. Responsibilities:
 - build `RenderCountryShape` objects and apply geographic, conceptual, hybrid transforms;
 - compute bounding volumes and resolve collisions;
 - project and clip infrastructure supplied by external providers (ingestion module);
+- extract deterministic border segments (land + coastline) from high-res world geometry, expose per-country/pair lookup, and surface render-ready geometry across LODs;
 - apply paint rules, border segment styling, and manage layer ordering;
 - remain ID-driven with no dataset-specific knowledge.
 
