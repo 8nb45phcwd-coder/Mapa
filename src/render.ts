@@ -53,6 +53,11 @@ export function applyConceptLayout(
   assignment: CountryLayoutAssignment,
   clusterEnvelope?: ClusterEnvelope
 ): void {
+  if (assignment.layout_id !== layout.layout_id) {
+    throw new Error(
+      `Layout mismatch: assignment ${assignment.layout_id} does not match layout ${layout.layout_id}`
+    );
+  }
   const slot = layout.slots.find((s) => s.slot_id === assignment.slot_id);
   if (!slot) throw new Error(`Slot ${assignment.slot_id} not found in layout ${layout.layout_id}`);
   const slotCenter: [number, number] = [slot.x + slot.w / 2, slot.y + slot.h / 2];

@@ -22,8 +22,8 @@ This document captures the functional and data-model requirements for the world 
 - `loadDefaultWorld` and `loadTopoJSON` fetch datasets.
 - `decodeGeometryByRef` resolves polygon/multipolygon or polyline from TopoJSON/GeoJSON using `geometry_ref` (id or name).
 - `buildCountryAnchor` computes centroid, bbox, and bounding circle for a geometry.
-- `projectGeometry` applies an arbitrary projection (`ProjectionFn` taking `[lon,lat]`) with optional caching via `ProjectedGeometryCache` keyed by geometry reference and projection name.
-- `prepareRenderCountryShape` orchestrates decoding, anchoring, projection, and creation of `RenderCountryShape`, accepting override geometry references or cached anchors.
+- `projectGeometry` applies an arbitrary projection (`ProjectionFn` taking `[lon,lat]`) with optional caching via `ProjectedGeometryCache` keyed by geometry reference and projection name. A level-of-detail hook (`lod` + `lodGeometryRefs`) lets callers swap simplified/detailed geometries per projection pass.
+- `prepareRenderCountryShape` orchestrates decoding, anchoring, projection, and creation of `RenderCountryShape`, accepting override geometry references, cached anchors, and LOD selection.
 
 ## 4. Layout & Clustering
 - `applyConceptLayout` places a country at its slot center or inside a cluster envelope. Cluster envelopes carry layout type, member index/count, and radius for positioning.
@@ -48,7 +48,7 @@ This document captures the functional and data-model requirements for the world 
 - `getBorderSegmentRenderInfo` merges explicit `BorderSegmentStyle` with paint rules and optionally decodes/projects segment geometry to deliver render-ready partial-border styling.
 
 ## 7. Subdivision
-- `generateSubdivisions` creates synthetic cells per country using `AutoSubdivisionConfig` methods: `grid`, `hex`, or `voronoi`. Cells are produced in geographic coordinates based on the country anchor’s bbox/bounding circle.
+- `generateSubdivisions` creates synthetic cells per country using `AutoSubdivisionConfig` methods: `grid`, `hex`, or `voronoi`. Cells are produced in geographic coordinates based on the country anchor’s bbox/bounding circle, and a projection helper (`projectSubdivisionCells`) maps them into render space.
 
 ## 8. Invariants
 - Keep source geometry immutable.

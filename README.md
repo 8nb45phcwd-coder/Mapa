@@ -127,6 +127,7 @@ The engine must:
 	•	From TopoJSON/GeoJSON (e.g. world-atlas).
 	•	Compute AnchorPoints for each country.
 	•	Produce RenderCountryShape instances with projected polygons.
+	•	Swap geometry references per level-of-detail via preparation options.
 	2.	Support conceptual layouts
 	•	Layouts defined by LayoutDefinition + LayoutSlot.
 	•	Countries assigned to slots via CountryLayoutAssignment.
@@ -150,6 +151,8 @@ The engine must:
 	7.	Support partial borders
 	•	BorderSegment must allow styling only a section of the border A–B, not the whole boundary.
 	•	Geometry for each segment should sit on the real border line.
+	8.	Synthetic subdivisions
+	•	Generate grid/hex/voronoi cells in geo-space and project them alongside country geometry for styling.
 
 ⸻
 

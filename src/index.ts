@@ -32,4 +32,4 @@ export { resolvePaintFor, getBorderSegmentRenderInfo } from "./style.js";
 
 export { buildClusterEnvelope, buildClusterMemberEnvelopes } from "./layout.js";
 
-export { generateSubdivisions } from "./subdivision.js";
+export { generateSubdivisions, projectSubdivisionCells } from "./subdivision.js";

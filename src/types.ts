@@ -160,6 +160,8 @@ export interface AutoSubdivisionConfig {
   cells: number; // e.g. 4,9,16...
 }
 
+export type LodLevel = "low" | "medium" | "high" | number;
+
 export interface ResolvedStyle {
   fill?: string;
   stroke?: string;
@@ -180,4 +182,11 @@ export interface SubdivisionCell {
   country_id: CountryID;
   polygon_geo: [number, number][][]; // simple polygon ring in [lon,lat]
   centroid_geo: [number, number];
+}
+
+export interface ProjectedSubdivisionCell {
+  cell_id: string;
+  country_id: CountryID;
+  polygon_projected: [number, number][][];
+  centroid_projected: [number, number];
 }

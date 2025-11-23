@@ -1,9 +1,12 @@
 import type {
   AnchorPoints,
   AutoSubdivisionConfig,
+  ProjectedSubdivisionCell,
   CountryID,
   SubdivisionCell,
 } from "./types.js";
+import type { ProjectionFn } from "./geometry.js";
+import { projectGeometry } from "./geometry.js";
 
 function polygonFromBBox(bbox: { minLon: number; maxLon: number; minLat: number; maxLat: number }): [number, number][][] {
   const { minLon, maxLon, minLat, maxLat } = bbox;
@@ -134,4 +137,30 @@ export function generateSubdivisions(
     default:
       return [];
   }
+}
+
+/**
+ * Project synthetic subdivision cells using the same projection utilities as country polygons.
+ */
+export function projectSubdivisionCells(
+  cells: SubdivisionCell[],
+  projection: ProjectionFn
+): ProjectedSubdivisionCell[] {
+  return cells.map((cell) => {
+    const projected = projectGeometry(
+      { type: "Polygon", coordinates: cell.polygon_geo },
+      projection
+    );
+    const centroid = projected.coordinates[0].reduce(
+      (acc: [number, number], coord: [number, number]) => [acc[0] + coord[0], acc[1] + coord[1]],
+      [0, 0]
+    );
+    const n = projected.coordinates[0].length || 1;
+    return {
+      cell_id: cell.cell_id,
+      country_id: cell.country_id,
+      polygon_projected: projected.coordinates as [number, number][][],
+      centroid_projected: [centroid[0] / n, centroid[1] / n] as [number, number],
+    };
+  });
 }

@@ -4,6 +4,7 @@ import type {
   AnchorPoints,
   Country,
   CountryID,
+  LodLevel,
   RenderCountryShape,
   TransformMatrix,
 } from "./types.js";
@@ -209,6 +210,8 @@ export interface PrepareRenderShapeOptions {
   geometryRef?: string;
   anchorCache?: Map<string, AnchorPoints>;
   geometryDecoder?: (source: any, ref: string) => any;
+  lod?: LodLevel;
+  lodGeometryRefs?: Record<string, string> | Map<string | number, string>;
 }
 
 /**
@@ -220,7 +223,11 @@ export function prepareRenderCountryShape(
   projection: ProjectionFn,
   options: PrepareRenderShapeOptions = {}
 ): RenderCountryShape {
-  const geometryRef = options.geometryRef ?? country.geometry_ref;
+  const geometryRef = resolveGeometryRef(
+    options.geometryRef ?? country.geometry_ref,
+    options.lod,
+    options.lodGeometryRefs
+  );
   const decoder = options.geometryDecoder ?? decodeGeometryByRef;
   const geo = decoder(source, geometryRef);
   if (!geo) throw new Error(`Geometry ${geometryRef} not found for ${country.name}`);
@@ -254,6 +261,19 @@ function computeProjectedCentroid(geometry: any): [number, number] {
   };
   recur(geometry.coordinates);
   return count === 0 ? [0, 0] : [sumX / count, sumY / count];
+}
+
+function resolveGeometryRef(
+  baseRef: string,
+  lod?: LodLevel,
+  lodGeometryRefs?: Record<string, string> | Map<string | number, string>
+): string {
+  if (!lodGeometryRefs || lod === undefined || lod === null) return baseRef;
+  const lookup =
+    lodGeometryRefs instanceof Map
+      ? lodGeometryRefs.get(lod)
+      : lodGeometryRefs[String(lod)] ?? lodGeometryRefs[lod as any];
+  return lookup || baseRef;
 }
 
 /** Apply transform matrix to a single [x,y] point. */
