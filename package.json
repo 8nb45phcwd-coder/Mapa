@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "d3-geo": "^3.1.0",
+    "proj4": "^2.11.0",
     "polygon-clipping": "^0.15.7",
     "topojson-client": "^3.1.0",
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {
     "@types/d3-geo": "^3.1.0",
+    "@types/proj4": "^2.5.5",
     "@types/node": "^24.10.1",
     "@types/topojson-client": "^3.1.5",
     "typescript": "^5.3.0",

@@ -1,0 +1,81 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "TransMed Gas",
+        "infraType": "pipeline_gas",
+        "source": "GEM sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[6.5, 32.5], [9.6, 36.8], [12.6, 37.8]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "MidMed Gas",
+        "infraType": "pipeline_gas",
+        "source": "GEM sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-9.1, 42.0], [10.0, 46.0]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Italy Internal",
+        "infraType": "pipeline_gas",
+        "source": "GEM sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[12.4, 41.9], [13.4, 42.6]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BTC Oil",
+        "infraType": "pipeline_oil",
+        "source": "GEM sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[46.9, 40.4], [44.0, 41.7], [35.3, 36.8]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "MAREA Cable",
+        "infraType": "subsea_cable",
+        "source": "TeleGeography sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[-75.47, 39.05], [-9.3, 38.7]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "DE-PL Interconnector",
+        "infraType": "power_interconnector",
+        "source": "ENTSO-E/OSM",
+        "crs": "EPSG:3857"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [1491681.18, 6891041.72],
+          [2337709.31, 6836369.12]
+        ]
+      }
+    }
+  ]
+}

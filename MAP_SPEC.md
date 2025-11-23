@@ -56,10 +56,10 @@ This document captures the functional and data-model requirements for the world 
 - **Layer registry**: optional `MapLayer` objects registered by `zIndex` via `registerLayer`/`unregisterLayer`/`getLayers`. Layers consume IDs (CountryID, RegionID, etc.) and render through a renderer API without relying on screen coordinates as source of truth.
 - **Temporal extension point**: `TemporalLayer` extends `MapLayer` with optional `setTime`, maintaining snapshot compatibility.
 
-### Infrastructure ingestion (phase 1)
+### Infrastructure ingestion (phase 2)
 - `InfrastructureSegmentType` and `InfrastructureNodeType` enumerate hard infrastructure categories (pipelines, subsea cables, ports, landing points, strategic plants/mines, cargo airports).
-- `InfraSourceConfig` declares an external/bundled source (type, sourceId, url, adapter), with defaults pointing to packaged GeoJSON samples derived from open data.
-- `ingestInfrastructure` fetches sources, normalises features into `InfrastructureLine`/`InfrastructureNode`, assigns countries via polygon containment (with tolerance), clips internal segments against country polygons, and computes ordered country traversals for transnational segments.
+- `InfraSourceConfig` declares an external source (type, sourceId, url, adapter, optional CRS/reliability/preprocess). `defaultInfraSources` now reference real feeds: GEM oil/gas pipelines, TeleGeography cables/landings, ENTSO-E/OSM interconnectors, World Port Index ports, GPPD plants, GEM/USGS mines, and OurAirports/OSM cargo hubs.
+- `ingestInfrastructure` fetches sources (or uses injected fixtures), preprocesses if configured, **reprojects all coordinates to WGS84 via proj4**, normalises features, assigns countries via polygon containment → nearest-edge tolerance → centroid fallback, clips internal segments against polygons, and computes ordered country traversals for transnational segments using densified sampling (~20 km) to avoid micro-crossing misses.
 - Helpers `ensureNodeWithinCountry`/`ensureSegmentWithinCountry` validate clipping, while `buildCountryGeoIndex` builds reusable country masks for ingestion and tests.
 
 ## 8. Invariants

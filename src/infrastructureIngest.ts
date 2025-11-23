@@ -1,5 +1,6 @@
 import { feature } from "topojson-client";
 import { geoContains, geoDistance } from "d3-geo";
+import proj4 from "proj4";
 import type {
   ClippedInfrastructureLine,
   Country,
@@ -15,11 +16,17 @@ import type {
 import { decodeGeometryByRef } from "./geometry.js";
 import { clipInternalInfrastructure } from "./infrastructure.js";
 
+export type InfraReliability = "authoritative" | "partial" | "approximate" | "noisy" | "osm_derived";
+
 export interface InfraSourceConfig {
   infraType: InfrastructureSegmentType | InfrastructureNodeType;
   sourceId: string;
   url: string;
   adapter: string;
+  crs?: string; // EPSG code if not WGS84
+  reliability?: InfraReliability;
+  preprocess?: (data: any) => any;
+  notes?: string;
 }
 
 export interface InfraIngestOptions {
@@ -34,56 +41,104 @@ export interface IngestedInfrastructure {
   nodes: InfrastructureNode[];
 }
 
-// Phase 1 sources use bundled GeoJSON samples derived from open/public datasets (pipelines, cables, ports, landings, mines,
-// airports). Callers can override these URLs with richer datasets via the `configs` parameter.
+// Default sources target authoritative or semi-authoritative global datasets; callers can override via `configs`
+// or supply pre-fetched `sourceData` during tests for determinism.
 export const defaultInfraSources: InfraSourceConfig[] = [
   {
     infraType: "pipeline_gas",
     sourceId: "global_pipelines_gas",
-    url: new URL("./data/infra-phase1-lines.geojson", import.meta.url).href,
+    url: "https://datasets.globalenergymonitor.org/pipelines/latest/gas-pipelines.geojson",
     adapter: "geojson_line",
+    reliability: "authoritative",
+    notes: "GEM gas pipelines",
   },
   {
     infraType: "pipeline_oil",
     sourceId: "global_pipelines_oil",
-    url: new URL("./data/infra-phase1-lines.geojson", import.meta.url).href,
+    url: "https://datasets.globalenergymonitor.org/pipelines/latest/oil-pipelines.geojson",
     adapter: "geojson_line",
+    reliability: "authoritative",
+    notes: "GEM oil pipelines",
+  },
+  {
+    infraType: "power_interconnector",
+    sourceId: "entso_e_interconnectors",
+    url: "https://raw.githubusercontent.com/openinframap/homepage/master/data/power-interconnectors.geojson",
+    adapter: "geojson_line",
+    reliability: "partial",
+    notes: "ENTSO-E/OSM derived interconnectors",
   },
   {
     infraType: "subsea_cable",
     sourceId: "global_subsea_cables",
-    url: new URL("./data/infra-phase1-lines.geojson", import.meta.url).href,
+    url: "https://www.submarinecablemap.com/api/v3/cable",
     adapter: "geojson_line",
+    reliability: "partial",
+    notes: "TeleGeography public cable GeoJSON",
   },
   {
     infraType: "cable_landing",
     sourceId: "global_cable_landings",
-    url: new URL("./data/infra-phase1-nodes.geojson", import.meta.url).href,
+    url: "https://www.submarinecablemap.com/api/v3/landing-point",
     adapter: "geojson_point",
+    reliability: "partial",
+    notes: "TeleGeography landing stations",
   },
   {
     infraType: "port_container",
     sourceId: "global_ports",
-    url: new URL("./data/infra-phase1-nodes.geojson", import.meta.url).href,
+    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
     adapter: "geojson_point",
+    reliability: "authoritative",
+    notes: "World Port Index (with OSM maritime tags as fallback)",
+  },
+  {
+    infraType: "port_bulk",
+    sourceId: "global_ports_bulk",
+    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
+    adapter: "geojson_point",
+    reliability: "authoritative",
+    notes: "World Port Index bulk terminals",
+  },
+  {
+    infraType: "port_oil",
+    sourceId: "global_ports_oil",
+    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
+    adapter: "geojson_point",
+    reliability: "authoritative",
+    notes: "World Port Index oil terminals",
+  },
+  {
+    infraType: "port_lng",
+    sourceId: "global_ports_lng",
+    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
+    adapter: "geojson_point",
+    reliability: "authoritative",
+    notes: "World Port Index LNG terminals",
   },
   {
     infraType: "power_plant_strategic",
     sourceId: "global_power_plants",
-    url: new URL("./data/infra-phase1-nodes.geojson", import.meta.url).href,
+    url: "https://storage.googleapis.com/global-power-plant-database/global_power_plant_database.geojson",
     adapter: "geojson_point",
+    reliability: "partial",
+    notes: "Global Power Plant Database",
   },
   {
     infraType: "mine_critical",
     sourceId: "global_mines",
-    url: new URL("./data/infra-phase1-nodes.geojson", import.meta.url).href,
+    url: "https://datasets.globalenergymonitor.org/mines/latest/mines.geojson",
     adapter: "geojson_point",
+    reliability: "partial",
+    notes: "GEM mines / USGS",
   },
   {
     infraType: "cargo_airport",
     sourceId: "global_airports",
-    url: new URL("./data/infra-phase1-nodes.geojson", import.meta.url).href,
+    url: "https://ourairports.com/data/airports.geojson",
     adapter: "geojson_point",
+    reliability: "approximate",
+    notes: "OurAirports cargo hubs / OSM aeroway",
   },
 ];
 
@@ -135,11 +190,24 @@ export function buildCountryGeoIndex(
   return idx;
 }
 
-function ensureWgs84Coord(coord: [number, number]) {
+export function ensureWgs84Coord(coord: [number, number]) {
   const [lon, lat] = coord;
   if (lon < -180 || lon > 180 || lat < -90 || lat > 90) {
     throw new Error(`Coordinate ${coord} not in WGS84 bounds`);
   }
+}
+
+function reprojectToWGS84(coord: [number, number], sourceCrs?: string): [number, number] {
+  if (!sourceCrs || sourceCrs === "EPSG:4326" || sourceCrs.toLowerCase() === "wgs84") return coord;
+  const projected = proj4(sourceCrs, "WGS84", coord);
+  return [projected[0], projected[1]];
+}
+
+function geometryCrs(data: any, config: InfraSourceConfig): string | undefined {
+  if (config.crs) return config.crs;
+  const crsName = data?.crs?.properties?.name || data?.crs?.name;
+  if (typeof crsName === "string") return crsName;
+  return undefined;
 }
 
 function collectGeoJSONFeatures(data: any): any[] {
@@ -157,13 +225,14 @@ function collectGeoJSONFeatures(data: any): any[] {
 
 function adaptLineFeatures(data: any, config: InfraSourceConfig): RawFeature[] {
   const features = collectGeoJSONFeatures(data);
+  const crs = geometryCrs(data, config);
   const results: RawFeature[] = [];
   features.forEach((f, idx) => {
     if (!f.geometry || (f.geometry.type !== "LineString" && f.geometry.type !== "MultiLineString")) return;
     const lines: [number, number][][] =
       f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.coordinates;
     lines.forEach((coords, lineIdx) => {
-      const ring = coords as [number, number][];
+      const ring = (coords as [number, number][]).map((pt) => reprojectToWGS84(pt, f.properties?.crs || crs));
       ring.forEach(ensureWgs84Coord);
       const id = (f.id ?? f.properties?.id ?? `${config.sourceId}-${idx}-${lineIdx}`).toString();
       const name = (f.properties?.name ?? f.properties?.Name ?? config.sourceId).toString();
@@ -187,10 +256,11 @@ function adaptLineFeatures(data: any, config: InfraSourceConfig): RawFeature[] {
 
 function adaptPointFeatures(data: any, config: InfraSourceConfig): RawFeature[] {
   const features = collectGeoJSONFeatures(data);
+  const crs = geometryCrs(data, config);
   const results: RawFeature[] = [];
   features.forEach((f, idx) => {
     if (!f.geometry || f.geometry.type !== "Point") return;
-    const coords = f.geometry.coordinates as [number, number];
+    const coords = reprojectToWGS84(f.geometry.coordinates as [number, number], f.properties?.crs || crs);
     ensureWgs84Coord([coords[0], coords[1]]);
     const id = (f.id ?? f.properties?.id ?? `${config.sourceId}-${idx}`).toString();
     const name = (f.properties?.name ?? f.properties?.Name ?? config.sourceId).toString();
@@ -216,28 +286,68 @@ const adapterRegistry: Record<string, (data: any, config: InfraSourceConfig) => 
   geojson_point: adaptPointFeatures,
 };
 
+function segmentDistanceKm(point: [number, number], a: [number, number], b: [number, number]): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const ax = toRad(a[0]);
+  const ay = toRad(a[1]);
+  const bx = toRad(b[0]);
+  const by = toRad(b[1]);
+  const px = toRad(point[0]);
+  const py = toRad(point[1]);
+  const vx = bx - ax;
+  const vy = by - ay;
+  const wx = px - ax;
+  const wy = py - ay;
+  const c1 = vx * wx + vy * wy;
+  const c2 = vx * vx + vy * vy;
+  const t = c2 === 0 ? 0 : Math.max(0, Math.min(1, c1 / c2));
+  const projX = ax + t * vx;
+  const projY = ay + t * vy;
+  const distRad = Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+  return distRad * 6371;
+}
+
+function polygonEdgeDistanceKm(point: [number, number], entry: CountryGeometry): number {
+  let min = Infinity;
+  for (const poly of entry.multipolygon) {
+    for (const ring of poly) {
+      for (let i = 0; i < ring.length - 1; i++) {
+        const d = segmentDistanceKm(point, ring[i], ring[i + 1]);
+        if (d < min) min = d;
+      }
+    }
+  }
+  return min;
+}
+
 function findCountryForPoint(
   point: [number, number],
   countryIndex: Map<CountryID, CountryGeometry>,
-  toleranceDeg = 0.25
+  toleranceKm = 40
 ): CountryID | undefined {
   for (const entry of countryIndex.values()) {
     if (geoContains(entry.geojson, point)) return entry.id;
   }
-  // tolerance: choose nearest centroid within tolerance if not strictly inside
+  let bestEdge: { id: CountryID; distance: number } | null = null;
+  for (const entry of countryIndex.values()) {
+    const d = polygonEdgeDistanceKm(point, entry);
+    if (!bestEdge || d < bestEdge.distance) bestEdge = { id: entry.id, distance: d };
+  }
+  if (bestEdge && bestEdge.distance <= toleranceKm) return bestEdge.id;
+
+  // fallback to nearest centroid if coastal tolerance fails
   let best: { id: CountryID; distance: number } | null = null;
   for (const entry of countryIndex.values()) {
     const bounds = entry.geojson.bbox || computeBounds(entry.geojson);
     const centroid =
       entry.geojson.centroid || (bounds ? [(bounds[0] + bounds[2]) / 2, (bounds[1] + bounds[3]) / 2] : null);
-    const candidate = centroid;
-    if (!candidate) continue;
-    const d = geoDistance([candidate[0], candidate[1]], point);
+    if (!centroid) continue;
+    const d = geoDistance([centroid[0], centroid[1]], point);
     if (!best || d < best.distance) {
       best = { id: entry.id, distance: d };
     }
   }
-  if (best && best.distance * (180 / Math.PI) <= toleranceDeg) return best.id;
+  if (best) return best.id;
   return undefined;
 }
 
@@ -265,12 +375,34 @@ function computeBounds(geometry: any): [number, number, number, number] | null {
   return [minLon, minLat, maxLon, maxLat];
 }
 
+function haversineKm(a: [number, number], b: [number, number]) {
+  return geoDistance(a, b) * 6371;
+}
+
+function densifyLine(line: [number, number][], maxStepKm = 20): [number, number][] {
+  if (line.length < 2) return line.slice();
+  const out: [number, number][] = [line[0]];
+  for (let i = 0; i < line.length - 1; i++) {
+    const a = line[i];
+    const b = line[i + 1];
+    const dist = haversineKm(a, b);
+    const steps = Math.max(1, Math.ceil(dist / maxStepKm));
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+    }
+  }
+  return out;
+}
+
 function countrySequenceForLine(
   line: InfrastructureLine,
-  countryIndex: Map<CountryID, CountryGeometry>
+  countryIndex: Map<CountryID, CountryGeometry>,
+  stepKm = 20
 ): CountryID[] {
   const seq: CountryID[] = [];
-  line.geometry_geo.forEach((pt) => {
+  const densified = densifyLine(line.geometry_geo, stepKm);
+  densified.forEach((pt) => {
     const country = findCountryForPoint(pt, countryIndex);
     if (country && seq[seq.length - 1] !== country) seq.push(country);
   });
@@ -318,7 +450,8 @@ export async function ingestInfrastructure(
     const adapter = adapterRegistry[config.adapter];
     if (!adapter) throw new Error(`Adapter ${config.adapter} not registered`);
     const data = await fetchDataset(config, options);
-    const rawFeatures = adapter(data, config);
+    const prepared = config.preprocess ? config.preprocess(data) : data;
+    const rawFeatures = adapter(prepared, config);
     rawFeatures.forEach((raw) => {
       if (raw.kind === "node") {
         const country = findCountryForPoint([raw.node.lon, raw.node.lat], countryIndex);

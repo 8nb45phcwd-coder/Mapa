@@ -83,7 +83,7 @@ High-level core types (see `MAP_SPEC.md` for full definitions):
 - **Infrastructure & layers**:
   - Helpers to clip internal infrastructure polylines to country polygons and project them with inherited transforms.
   - Transnational infrastructure supports geographic and conceptual render paths with hybrid interpolation.
-  - Phase 1 ingestion pipeline normalises bundled/remote GeoJSON for pipelines, subsea cables, ports/landings, strategic plants/mines, and cargo airports with enforced WGS84 + country clipping.
+  - Phase 2 ingestion targets real feeds (GEM pipelines, TeleGeography cables/landings, ENTSO-E/OSM interconnectors, World Port Index ports, GPPD plants, GEM/USGS mines, OurAirports/OSM cargo hubs), reprojects via proj4 into WGS84, clips internal assets, densifies traversal to recover micro-crossings, and assigns countries with edge-aware tolerance.
   - A minimal layer registry (`registerLayer`, `unregisterLayer`, `getLayers`) to stack optional layers by `zIndex` while relying on IDs rather than screen coordinates.
 
 The engine itself is **UI-agnostic**: it is not tied to Canvas, SVG, WebGL, React, etc.  

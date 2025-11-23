@@ -1,0 +1,30 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"name": "Lisbon Port", "infraType": "port_container", "source": "WPI/OSM"},
+      "geometry": {"type": "Point", "coordinates": [-9.203, 38.68]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name": "Bude Landing", "infraType": "cable_landing", "source": "TeleGeography"},
+      "geometry": {"type": "Point", "coordinates": [-4.55, 50.83]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name": "Kiruna Mine", "infraType": "mine_critical", "source": "USGS/GEM"},
+      "geometry": {"type": "Point", "coordinates": [20.225, 67.855]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name": "Taranto Plant", "infraType": "power_plant_strategic", "source": "GPPD"},
+      "geometry": {"type": "Point", "coordinates": [17.25, 40.47]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"name": "Leipzig Cargo", "infraType": "cargo_airport", "crs": "EPSG:3857", "source": "OurAirports/OSM"},
+      "geometry": {"type": "Point", "coordinates": [1362428.12, 6696622.05]}
+    }
+  ]
+}
