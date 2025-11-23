@@ -1,10 +1,3 @@
-# Mapa
-Aqui vai um README pensado para o agente (e para humanos), em inglês, já em formato GitHub.
-Podes criar um repositório, meter este texto em README.md e pôr também o MAP_SPEC.md lá dentro.
-
-⸻
-
-
 # World Map Engine Core
 
 A TypeScript library for building a **world-scale map engine** that:
