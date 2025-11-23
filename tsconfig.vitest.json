@@ -1,9 +1,23 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["vitest/globals", "node"],
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "world-map-engine": ["engine/src/index.ts"],
+      "world-map-engine/*": ["engine/src/*"],
+      "world-map-ingestion": ["ingestion/src/index.ts"],
+      "world-map-ingestion/*": ["ingestion/src/*"],
+      "world-map-world-model": ["world_model/src/index.ts"],
+      "world-map-world-model/*": ["world_model/src/*"]
+    }
   },
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["dist", "node_modules"]
+  "include": [
+    "engine/src/**/*",
+    "ingestion/src/**/*",
+    "world_model/src/**/*",
+    "engine/tests/**/*",
+    "ingestion/tests/**/*"
+  ],
+  "exclude": ["**/dist", "node_modules"]
 }

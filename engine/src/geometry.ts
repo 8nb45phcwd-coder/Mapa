@@ -8,12 +8,13 @@ import type {
   RenderCountryShape,
   TransformMatrix,
 } from "./types.js";
-import capitalAnchors from "./data/capital-coordinates.json" assert { type: "json" };
+import capitalAnchors from "./data/capital-coordinates.json";
 
 const normalizedCapitalAnchors = (() => {
   const norm = new Map<string, [number, number]>();
-  Object.entries(capitalAnchors as Record<string, [number, number]>).forEach(([name, coords]) => {
-    norm.set(normalizeName(name), coords as [number, number]);
+  const anchorSource = capitalAnchors as unknown as Record<string, [number, number]>;
+  Object.entries(anchorSource).forEach(([name, coords]) => {
+    norm.set(normalizeName(name), coords);
   });
   return norm;
 })();

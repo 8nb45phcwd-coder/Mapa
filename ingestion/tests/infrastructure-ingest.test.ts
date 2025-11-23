@@ -14,11 +14,16 @@ import {
   ensureNodeWithinCountry,
   ensureSegmentWithinCountry,
   buildCountryGeoIndex,
-} from "../src/infrastructureIngest.js";
-import { decodeGeometryByRef, prepareRenderCountryShape } from "../src/geometry.js";
-import { projectInfrastructureLine } from "../src/infrastructure.js";
-import { detachCountry } from "../src/render.js";
-import type { Country, InfraSourceConfig, ClippedInfrastructureLine, InfrastructureNode } from "../src/types.js";
+} from "world-map-ingestion";
+import { decodeGeometryByRef, prepareRenderCountryShape } from "world-map-engine/geometry.js";
+import { projectInfrastructureLine } from "world-map-engine/infrastructure.js";
+import { detachCountry } from "world-map-engine/render.js";
+import type {
+  Country,
+  InfraSourceConfig,
+  ClippedInfrastructureLine,
+  InfrastructureNode,
+} from "world-map-engine";
 
 const worldFeatures: any = feature(world as any, (world as any).objects.countries);
 const countries: Country[] = worldFeatures.features.map((f: any) => ({

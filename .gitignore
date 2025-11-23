@@ -1,2 +1,6 @@
 node_modules
 /dist
+engine/dist
+ingestion/dist
+world_model/dist
+*.tsbuildinfo

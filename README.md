@@ -8,7 +8,11 @@ A TypeScript library for building a **world-scale map engine** that:
 - Can **style and highlight partial border segments**, not just whole countries.
 - Is designed to be **extended** with domain logic (flows, sanctions, markets, mobility, etc.) without changing the core geography.
 
-This repository provides the **core engine**, not a full application.
+This repository provides the **core engine**, not a full application. The codebase is split into:
+
+- `engine/`: rendering and layout kernel (previously the `src/` root).
+- `ingestion/`: real-world infrastructure ingestion (pipelines, cables, ports, nodes) with reprojection and clipping.
+- `world_model/`: placeholder for future country/world-system metadata (no logic yet).
 
 ---
 

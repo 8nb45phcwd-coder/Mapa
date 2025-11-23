@@ -12,9 +12,9 @@ import type {
   InfrastructureNodeType,
   InfrastructureSegmentType,
   TransnationalInfrastructureLine,
-} from "./types.js";
-import { decodeGeometryByRef } from "./geometry.js";
-import { clipInternalInfrastructure } from "./infrastructure.js";
+} from "world-map-engine";
+import { decodeGeometryByRef } from "world-map-engine";
+import { clipInternalInfrastructure } from "world-map-engine";
 
 export type InfraReliability = "authoritative" | "partial" | "approximate" | "noisy" | "osm_derived";
 

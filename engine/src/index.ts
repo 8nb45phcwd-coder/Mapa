@@ -41,12 +41,4 @@ export {
   buildTransnationalHybridPath,
 } from "./infrastructure.js";
 
-export {
-  ingestInfrastructure,
-  defaultInfraSources,
-  ensureNodeWithinCountry,
-  ensureSegmentWithinCountry,
-  buildCountryGeoIndex,
-} from "./infrastructureIngest.js";
-
 export { registerLayer, unregisterLayer, getLayers } from "./layers.js";
