@@ -6,6 +6,8 @@
 export * from "./types.js";
 export {
   loadDefaultWorld,
+  loadWorld110m,
+  loadWorldDataset,
   loadTopoJSON,
   decodeGeometryByRef,
   buildCountryAnchor,

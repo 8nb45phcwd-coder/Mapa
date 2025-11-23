@@ -33,6 +33,10 @@ export interface InfraIngestOptions {
   fetcher?: typeof fetch;
   decoder?: (source: any, ref: string) => any;
   sourceData?: Record<string, any>;
+  classificationSource?: any;
+  classificationDecoder?: (source: any, ref: string) => any;
+  coastalToleranceKm?: number;
+  countryIndex?: Map<CountryID, CountryGeometry>;
 }
 
 export interface IngestedInfrastructure {
@@ -146,6 +150,14 @@ export interface CountryGeometry {
   id: CountryID;
   geojson: any;
   multipolygon: GeoMultiPolygon;
+  bbox?: [number, number, number, number];
+}
+
+interface CountryAssignment {
+  country_id?: CountryID;
+  offshore: boolean;
+  onshore: boolean;
+  distance_km?: number;
 }
 
 interface RawFeatureSegment {
@@ -181,10 +193,12 @@ export function buildCountryGeoIndex(
     const geo = decoder(source, country.geometry_ref);
     if (!geo) continue;
     const geom = geo.geometry ?? geo;
+    const bbox = computeBounds(geom) || undefined;
     idx.set(country.country_id, {
       id: country.country_id,
       geojson: geom,
       multipolygon: geometryToMultiPolygon(geom),
+      bbox,
     });
   }
   return idx;
@@ -320,20 +334,34 @@ function polygonEdgeDistanceKm(point: [number, number], entry: CountryGeometry):
   return min;
 }
 
+function bboxDistanceKm(point: [number, number], bbox: [number, number, number, number]): number {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const clamped: [number, number] = [
+    Math.min(Math.max(point[0], minLon), maxLon),
+    Math.min(Math.max(point[1], minLat), maxLat),
+  ];
+  return haversineKm(point, clamped);
+}
+
 function findCountryForPoint(
   point: [number, number],
   countryIndex: Map<CountryID, CountryGeometry>,
-  toleranceKm = 40
-): CountryID | undefined {
+  toleranceKm = 30
+): CountryAssignment {
   for (const entry of countryIndex.values()) {
-    if (geoContains(entry.geojson, point)) return entry.id;
+    if (geoContains(entry.geojson, point)) return { country_id: entry.id, offshore: false, onshore: true, distance_km: 0 };
   }
   let bestEdge: { id: CountryID; distance: number } | null = null;
   for (const entry of countryIndex.values()) {
+    const bboxDist = entry.bbox ? bboxDistanceKm(point, entry.bbox) : Infinity;
+    if (bboxDist > toleranceKm * 3) continue;
+    if (bestEdge && bboxDist > bestEdge.distance && bboxDist > toleranceKm) continue;
     const d = polygonEdgeDistanceKm(point, entry);
     if (!bestEdge || d < bestEdge.distance) bestEdge = { id: entry.id, distance: d };
   }
-  if (bestEdge && bestEdge.distance <= toleranceKm) return bestEdge.id;
+  if (bestEdge && bestEdge.distance <= toleranceKm) {
+    return { country_id: bestEdge.id, offshore: true, onshore: false, distance_km: bestEdge.distance };
+  }
 
   // fallback to nearest centroid if coastal tolerance fails
   let best: { id: CountryID; distance: number } | null = null;
@@ -347,8 +375,8 @@ function findCountryForPoint(
       best = { id: entry.id, distance: d };
     }
   }
-  if (best) return best.id;
-  return undefined;
+  if (best) return { country_id: best.id, offshore: true, onshore: false, distance_km: best.distance * 6371 };
+  return { offshore: true, onshore: false };
 }
 
 function computeBounds(geometry: any): [number, number, number, number] | null {
@@ -398,13 +426,25 @@ function densifyLine(line: [number, number][], maxStepKm = 20): [number, number]
 function countrySequenceForLine(
   line: InfrastructureLine,
   countryIndex: Map<CountryID, CountryGeometry>,
-  stepKm = 20
+  stepKm = 20,
+  coastalToleranceKm = 30
 ): CountryID[] {
   const seq: CountryID[] = [];
   const densified = densifyLine(line.geometry_geo, stepKm);
+  let lastCountry: CountryID | undefined;
   densified.forEach((pt) => {
-    const country = findCountryForPoint(pt, countryIndex);
-    if (country && seq[seq.length - 1] !== country) seq.push(country);
+    if (lastCountry) {
+      const entry = countryIndex.get(lastCountry);
+      if (entry && geoContains(entry.geojson, pt)) {
+        if (seq[seq.length - 1] !== lastCountry) seq.push(lastCountry);
+        return;
+      }
+    }
+    const assignment = findCountryForPoint(pt, countryIndex, coastalToleranceKm);
+    if (assignment.country_id) {
+      lastCountry = assignment.country_id;
+      if (seq[seq.length - 1] !== assignment.country_id) seq.push(assignment.country_id);
+    }
   });
   return seq;
 }
@@ -441,10 +481,14 @@ export async function ingestInfrastructure(
   options: InfraIngestOptions = {}
 ): Promise<IngestedInfrastructure> {
   const decoder = options.decoder ?? decodeGeometryByRef;
-  const countryIndex = buildCountryGeoIndex(countries, source, decoder);
+  const classificationSource = options.classificationSource ?? source;
+  const classificationDecoder = options.classificationDecoder ?? decoder;
+  const countryIndex =
+    options.countryIndex ?? buildCountryGeoIndex(countries, classificationSource, classificationDecoder);
   const internalSegments: ClippedInfrastructureLine[] = [];
   const transnationalSegments: TransnationalInfrastructureLine[] = [];
   const nodes: InfrastructureNode[] = [];
+  const coastalTolerance = options.coastalToleranceKm ?? 30;
 
   for (const config of configs) {
     const adapter = adapterRegistry[config.adapter];
@@ -454,11 +498,13 @@ export async function ingestInfrastructure(
     const rawFeatures = adapter(prepared, config);
     rawFeatures.forEach((raw) => {
       if (raw.kind === "node") {
-        const country = findCountryForPoint([raw.node.lon, raw.node.lat], countryIndex);
-        if (country) raw.node.country_id = country;
+        const assignment = findCountryForPoint([raw.node.lon, raw.node.lat], countryIndex, coastalTolerance);
+        if (assignment.country_id) raw.node.country_id = assignment.country_id;
+        raw.node.offshore = assignment.offshore;
+        if (assignment.distance_km !== undefined) raw.node.offshore_distance_km = assignment.distance_km;
         nodes.push(raw.node);
       } else {
-        const sequence = countrySequenceForLine(raw.segment, countryIndex);
+        const sequence = countrySequenceForLine(raw.segment, countryIndex, 20, coastalTolerance);
         if (sequence.length === 0) return; // discard incoherent feature
         raw.segment.countries = sequence;
         if (sequence.length === 1) {

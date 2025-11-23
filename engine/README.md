@@ -3,6 +3,7 @@
 Core rendering and layout kernel for the world-map stack. Responsibilities:
 
 - load and decode world geometries (TopoJSON/GeoJSON) and compute anchors (centroid, bbox, bounding circle, primary city);
+- expose helpers to load higher-fidelity country datasets (world-atlas 50m) for classification/masking while still permitting lower-LOD render geometries;
 - build `RenderCountryShape` objects and apply geographic, conceptual, hybrid transforms;
 - compute bounding volumes and resolve collisions;
 - project and clip infrastructure supplied by external providers (ingestion module);

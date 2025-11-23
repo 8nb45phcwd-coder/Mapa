@@ -253,6 +253,8 @@ export interface InfrastructureNode {
   name?: string;
   lon: number;
   lat: number;
+  offshore?: boolean;
+  offshore_distance_km?: number;
   properties?: Record<string, any>;
 }
 

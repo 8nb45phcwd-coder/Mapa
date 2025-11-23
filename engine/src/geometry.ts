@@ -21,13 +21,25 @@ const normalizedCapitalAnchors = (() => {
 
 export type ProjectionFn = (coords: [number, number]) => [number, number];
 
-/** Default world dataset loader (countries 110m). */
+/**
+ * Default world dataset loader using a higher resolution world-atlas cut (50m)
+ * so that coastlines and islands are preserved for clipping and assignment.
+ */
 export async function loadDefaultWorld(): Promise<any> {
-  const res = await fetch(
-    "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"
-  );
+  return loadWorldDataset("50m");
+}
+
+/** Low-resolution world dataset helper (110m) retained for explicit use-cases. */
+export async function loadWorld110m(): Promise<any> {
+  return loadWorldDataset("110m");
+}
+
+/** Load a world-atlas dataset by resolution key (e.g., "50m" or "110m"). */
+export async function loadWorldDataset(resolution: "50m" | "110m" | string): Promise<any> {
+  const url = `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-${resolution}.json`;
+  const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(`Failed to load world dataset: ${res.statusText}`);
+    throw new Error(`Failed to load world dataset ${resolution}: ${res.statusText}`);
   }
   return res.json();
 }

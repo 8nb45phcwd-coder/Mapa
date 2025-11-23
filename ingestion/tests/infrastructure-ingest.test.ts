@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import world from "world-atlas/countries-110m.json";
+import { beforeAll, describe, expect, it } from "vitest";
+import world from "world-atlas/countries-50m.json";
 import { feature } from "topojson-client";
 import { geoMercator } from "d3-geo";
 import { readFileSync } from "fs";
@@ -34,6 +34,19 @@ const countries: Country[] = worldFeatures.features.map((f: any) => ({
 
 const countryIndex = buildCountryGeoIndex(countries, world as any, decodeGeometryByRef);
 
+let ingestionResult: Awaited<ReturnType<typeof ingestInfrastructure>>;
+let ingestDurationMs = 0;
+
+beforeAll(async () => {
+  const start = Date.now();
+  ingestionResult = await ingestInfrastructure(configs, world as any, countries, {
+    sourceData,
+    coastalToleranceKm: 30,
+    countryIndex,
+  });
+  ingestDurationMs = Date.now() - start;
+}, 30000);
+
 const configs: InfraSourceConfig[] = [
   { infraType: "pipeline_gas", sourceId: "pipelines", url: "", adapter: "geojson_line" },
   { infraType: "pipeline_oil", sourceId: "pipelines_oil", url: "", adapter: "geojson_line" },
@@ -66,9 +79,13 @@ function findNode(name: string, nodes: InfrastructureNode[]) {
   return nodes.find((n) => n.name === name || n.id === name);
 }
 
+function findTransnational(name: string, segments: any[]) {
+  return segments.find((s) => s.name === name || s.id === name);
+}
+
 describe("infrastructure ingestion", () => {
   it("ingests lines and nodes with country coherence and clipping", async () => {
-    const result = await ingestInfrastructure(configs, world as any, countries, { sourceData });
+    const result = ingestionResult;
     expect(result.internalSegments.length).toBeGreaterThan(0);
     expect(result.transnationalSegments.length).toBeGreaterThan(0);
     expect(result.nodes.length).toBeGreaterThan(0);
@@ -86,7 +103,7 @@ describe("infrastructure ingestion", () => {
   });
 
   it("derives transnational sequences and keeps CRS in WGS84", async () => {
-    const result = await ingestInfrastructure(configs, world as any, countries, { sourceData });
+    const result = ingestionResult;
     const transmed = result.transnationalSegments.find((s) => s.name === "TransMed Gas");
     expect(transmed).toBeTruthy();
     expect(transmed!.countries?.[0]).toBe("Algeria");
@@ -100,7 +117,7 @@ describe("infrastructure ingestion", () => {
 
   it("moves internal infrastructure together with country transforms", async () => {
     const projection = geoMercator();
-    const result = await ingestInfrastructure(configs, world as any, countries, { sourceData });
+    const result = ingestionResult;
     const italy = countries.find((c) => c.name === "Italy");
     const italyLine = findInternal("Italy Internal", result.internalSegments)!;
     const italyPlant = findNode("Taranto Plant", result.nodes)!;
@@ -122,7 +139,7 @@ describe("infrastructure ingestion", () => {
   });
 
   it("reprojects and densifies infrastructure for correct country traversal", async () => {
-    const result = await ingestInfrastructure(configs, world as any, countries, { sourceData });
+    const result = ingestionResult;
     const midmed = result.transnationalSegments.find((s) => s.name === "MidMed Gas");
     expect(midmed).toBeTruthy();
     expect(midmed!.countries).toContain("Spain");
@@ -135,5 +152,48 @@ describe("infrastructure ingestion", () => {
       expect(Math.abs(lon)).toBeLessThanOrEqual(180);
       expect(Math.abs(lat)).toBeLessThanOrEqual(90);
     });
+  });
+
+  it("classifies island nodes using high-resolution country masks", async () => {
+    const result = ingestionResult;
+    const funchal = findNode("Funchal Anchorage", result.nodes)!;
+    expect(funchal.country_id).toBe("Portugal");
+    expect(funchal.offshore).toBe(false);
+    expect(ensureNodeWithinCountry(funchal, countryIndex)).toBe(true);
+  });
+
+  it("assigns near-coast offshore nodes without snapping coordinates", async () => {
+    const result = ingestionResult;
+    const lng = findNode("Lisbon Offshore LNG", result.nodes)!;
+    expect(lng.country_id).toBe("Portugal");
+    expect(lng.offshore).toBe(true);
+    expect(lng.offshore_distance_km).toBeLessThanOrEqual(30);
+    expect(ensureNodeWithinCountry(lng, countryIndex)).toBe(false);
+    expect(lng.lon).toBeCloseTo(-9.4, 2);
+    expect(lng.lat).toBeCloseTo(38.7, 2);
+  });
+
+  it("keeps fully offshore nodes stable while assigning to the nearest coast", async () => {
+    const result = ingestionResult;
+    const relay = findNode("Mid Atlantic Relay", result.nodes)!;
+    expect(relay.offshore).toBe(true);
+    expect(relay.lon).toBeCloseTo(-30.0, 2);
+    expect(relay.lat).toBeCloseTo(0.5, 2);
+    expect(relay.country_id).toBeTruthy();
+    expect(relay.offshore_distance_km).toBeGreaterThan(30);
+  });
+
+  it("detects coastal traversal with densification near islands", async () => {
+    const result = ingestionResult;
+    const aegean = findTransnational("Aegean Coastal Cable", result.transnationalSegments)!;
+    expect(aegean).toBeTruthy();
+    expect(aegean.countries?.[0]).toBe("Greece");
+    expect(aegean.countries).toContain("Turkey");
+    const idxTurkey = aegean.countries?.indexOf("Turkey") ?? -1;
+    expect(idxTurkey).toBeGreaterThan(0);
+  });
+
+  it("ingests high-res classification data within a reasonable time budget", () => {
+    expect(ingestDurationMs).toBeLessThan(30000);
   });
 });

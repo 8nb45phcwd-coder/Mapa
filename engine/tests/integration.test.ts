@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { feature } from "topojson-client";
-import world from "world-atlas/countries-110m.json";
+import world from "world-atlas/countries-50m.json";
 import { geoMercator } from "d3-geo";
 import {
   buildCountryAnchor,

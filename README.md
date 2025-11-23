@@ -48,7 +48,7 @@ The engine is designed to work with **real world geometry**, not hard-coded samp
 Recommended data source (Natural Earth via world-atlas):
 
 - TopoJSON:  
-  `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json`
+  `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json` (110m remains available for low-LOD rendering)
 
 You can either:
 

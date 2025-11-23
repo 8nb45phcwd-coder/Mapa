@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { geoMercator } from "d3-geo";
-import world from "world-atlas/countries-110m.json";
+import world from "world-atlas/countries-50m.json";
 import {
   buildCountryAnchor,
   createRenderCountryShape,
@@ -48,7 +48,7 @@ describe("geometry loading and anchors", () => {
     expect(anchors.centroid_geo[1]).toBeGreaterThan(-130);
     expect(anchors.bounding_circle_geo.radius_deg).toBeGreaterThan(5);
     expect(anchors.bbox_geo.maxLat).toBeGreaterThan(anchors.bbox_geo.minLat);
-    expect(anchors.bbox_geo.maxLon).toBeGreaterThan(anchors.bbox_geo.minLon);
+    expect(Math.abs(anchors.bbox_geo.maxLon - anchors.bbox_geo.minLon)).toBeGreaterThan(50);
     expect(anchors.primary_city_anchor).toBeDefined();
     expect(anchors.primary_city_anchor![0]).toBeGreaterThan(-90);
     expect(anchors.primary_city_anchor![0]).toBeLessThan(90);

@@ -76,6 +76,18 @@
           [2337709.31, 6836369.12]
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Aegean Coastal Cable",
+        "infraType": "subsea_cable",
+        "source": "TeleGeography sample"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[23.72, 37.98], [27.8, 36.2], [30.7, 36.9]]
+      }
     }
   ]
 }

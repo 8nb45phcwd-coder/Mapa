@@ -4,7 +4,7 @@ This document captures the functional and data-model requirements for the world 
 
 ## 1. Coordinate & Data Foundations
 - **Reference ellipsoid:** WGS84. All geographic inputs and anchor calculations assume [lon, lat] degrees.
-- **Datasets:** Any TopoJSON/GeoJSON with country/region geometries. Default helper targets `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json`.
+- **Datasets:** Any TopoJSON/GeoJSON with country/region geometries. Default helper targets the higher fidelity `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json` (with the 110m cut still available for low-LOD rendering).
 - **Immutability:** Never mutate inbound TopoJSON/GeoJSON; projection and layout operate on copies.
 
 ## 2. Core Types (see `src/types.ts`)
@@ -20,6 +20,7 @@ This document captures the functional and data-model requirements for the world 
 
 ## 3. Geometry & Projection Pipeline
 - `loadDefaultWorld` and `loadTopoJSON` fetch datasets.
+- Classification vs render geometry: high-resolution masks (50m) are used for assignment/clipping, while render geometry may use simplified LOD (110m) when performance-sensitive. Callers may supply distinct geometry refs via LOD hooks.
 - `decodeGeometryByRef` resolves polygon/multipolygon or polyline from TopoJSON/GeoJSON using `geometry_ref` (id or name).
 - `buildCountryAnchor` computes centroid, bbox, bounding circle, and a `primary_city_anchor` seeded from a capital-coordinate dataset (fallback to centroid when absent). Values are validated to remain within valid lat/lon ranges.
 - `projectGeometry` applies an arbitrary projection (`ProjectionFn` taking `[lon,lat]`) with optional caching via `ProjectedGeometryCache` keyed by geometry reference and projection name. A level-of-detail hook (`lod` + `lodGeometryRefs`) lets callers swap simplified/detailed geometries per projection pass.
@@ -59,7 +60,7 @@ This document captures the functional and data-model requirements for the world 
 ### Infrastructure ingestion (phase 2)
 - `InfrastructureSegmentType` and `InfrastructureNodeType` enumerate hard infrastructure categories (pipelines, subsea cables, ports, landing points, strategic plants/mines, cargo airports).
 - `InfraSourceConfig` declares an external source (type, sourceId, url, adapter, optional CRS/reliability/preprocess). `defaultInfraSources` now reference real feeds: GEM oil/gas pipelines, TeleGeography cables/landings, ENTSO-E/OSM interconnectors, World Port Index ports, GPPD plants, GEM/USGS mines, and OurAirports/OSM cargo hubs.
-- `ingestInfrastructure` fetches sources (or uses injected fixtures), preprocesses if configured, **reprojects all coordinates to WGS84 via proj4**, normalises features, assigns countries via polygon containment → nearest-edge tolerance → centroid fallback, clips internal segments against polygons, and computes ordered country traversals for transnational segments using densified sampling (~20 km) to avoid micro-crossing misses.
+- `ingestInfrastructure` fetches sources (or uses injected fixtures), preprocesses if configured, **reprojects all coordinates to WGS84 via proj4**, normalises features, assigns countries via polygon containment → nearest-edge tolerance → centroid fallback (flagging near-coast assignments as `offshore` without moving coordinates), clips internal segments against polygons, and computes ordered country traversals for transnational segments using densified sampling (~20 km) to avoid micro-crossing misses.
 - Helpers `ensureNodeWithinCountry`/`ensureSegmentWithinCountry` validate clipping, while `buildCountryGeoIndex` builds reusable country masks for ingestion and tests.
 
 ## 8. Invariants
