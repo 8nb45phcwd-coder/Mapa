@@ -222,13 +222,15 @@ export function clipInternalInfrastructure(
 export function projectInfrastructureLine(
   line: InfrastructureLine,
   projection: ProjectionFn,
-  transform?: { a: number; b: number; c: number; d: number; e: number; f: number }
+  transform?: { a: number; b: number; c: number; d: number; e: number; f: number },
+  camera?: { apply?: (pt: [number, number]) => [number, number] }
 ): ProjectedInfrastructureLine {
   const projected = line.geometry_geo.map((pt) => projection([pt[0], pt[1]]));
   const transformed = transform
     ? projected.map((pt) => applyTransform(transform, pt as [number, number]))
     : projected;
-  return { ...line, geometry_projected: transformed };
+  const cameraApplied = camera?.apply ? transformed.map((pt) => camera.apply!(pt as [number, number])) : transformed;
+  return { ...line, geometry_projected: cameraApplied };
 }
 
 export interface TransnationalPathResult {
@@ -242,9 +244,11 @@ export function buildTransnationalHybridPath(
   countries: Map<string, RenderCountryShape>,
   projection: ProjectionFn,
   viewport: Viewport,
-  alpha: number
+  alpha: number,
+  camera?: { apply?: (pt: [number, number]) => [number, number] }
 ): TransnationalPathResult {
   const geo = line.geometry_geo.map((pt) => projection([pt[0], pt[1]]));
+  const geoCamera = camera?.apply ? geo.map((p) => camera.apply!(p as [number, number])) : geo;
   const anchors = line.countries
     .map((id) => countries.get(id))
     .filter((c): c is RenderCountryShape => Boolean(c));
@@ -252,10 +256,10 @@ export function buildTransnationalHybridPath(
   const end = anchors[anchors.length - 1]?.conceptual_pos || [0.5, 0.5];
   const startScreen = conceptToScreen(start, viewport);
   const endScreen = conceptToScreen(end, viewport);
-  const conceptual: [number, number][] = geo.map((_, idx) => {
+  const conceptual: [number, number][] = geoCamera.map((_, idx) => {
     const t = geo.length <= 1 ? 0 : idx / (geo.length - 1);
     return interpolatePositions(startScreen, endScreen, t);
   }) as [number, number][];
-  const hybrid = geo.map((g, idx) => screenPosHybrid(g as [number, number], conceptual[idx], alpha));
-  return { geo, conceptual, hybrid };
+  const hybrid = geoCamera.map((g, idx) => screenPosHybrid(g as [number, number], conceptual[idx], alpha));
+  return { geo: geoCamera, conceptual, hybrid };
 }

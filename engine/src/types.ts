@@ -197,9 +197,31 @@ export interface ProjectedSubdivisionCell {
   centroid_projected: [number, number];
 }
 
+export interface CameraState {
+  zoom: number;
+  center: [number, number];
+  panOffsetX: number;
+  panOffsetY: number;
+  viewportWidth: number;
+  viewportHeight: number;
+}
+
 export type GeoRing = [number, number][]; // [lon,lat]
 export type GeoPolygon = GeoRing[];
 export type GeoMultiPolygon = GeoPolygon[];
+
+export interface CountryMask {
+  country_id: CountryID;
+  multipolygon: GeoMultiPolygon;
+  bbox?: [number, number, number, number];
+  source_ref?: string;
+}
+
+export interface LodGeometrySet {
+  level: LodLevel;
+  resolution: string;
+  topojson: any;
+}
 
 export type InfrastructureSegmentType =
   | "pipeline_oil"

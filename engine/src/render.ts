@@ -1,5 +1,6 @@
 import type {
   BoundingVolume,
+  CameraState,
   ClusterEnvelope,
   ClusterLayoutType,
   CountryLayoutAssignment,
@@ -8,6 +9,7 @@ import type {
   Viewport,
 } from "./types.js";
 import { applyTransform, IDENTITY_TRANSFORM } from "./geometry.js";
+import { applyCameraToPoint } from "./view/camera.js";
 
 /** Map concept-space coordinates [0,1]x[0,1] into screen-space pixels. */
 export function conceptToScreen(pos: [number, number], viewport: Viewport): [number, number] {
@@ -64,7 +66,8 @@ export function applyConceptLayout(
   layout: LayoutDefinition,
   assignment: CountryLayoutAssignment,
   clusterEnvelope?: ClusterEnvelope,
-  viewport: Viewport = { width: 1, height: 1 }
+  viewport: Viewport = { width: 1, height: 1 },
+  camera?: CameraState
 ): void {
   if (assignment.layout_id !== layout.layout_id) {
     throw new Error(
@@ -99,7 +102,7 @@ export function applyConceptLayout(
   const targetScreen = conceptToScreen(rc.conceptual_pos, viewport);
 
   // Translate the projected geometry so its current center aligns with the conceptual position in screen-space.
-  const bounds = updateBoundingVolumes(rc);
+  const bounds = updateBoundingVolumes(rc, camera);
   const currentCenter: [number, number] = [bounds.circle_screen.cx, bounds.circle_screen.cy];
   const offset: [number, number] = [targetScreen[0] - currentCenter[0], targetScreen[1] - currentCenter[1]];
   detachCountry(rc, offset);
@@ -128,7 +131,7 @@ export function scaleCountry(rc: RenderCountryShape, scaleX: number, scaleY: num
 }
 
 /** Compute bounding box and circle in screen-space after applying transforms. */
-export function updateBoundingVolumes(rc: RenderCountryShape): BoundingVolume {
+export function updateBoundingVolumes(rc: RenderCountryShape, camera?: CameraState): BoundingVolume {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;
@@ -137,10 +140,11 @@ export function updateBoundingVolumes(rc: RenderCountryShape): BoundingVolume {
   const accumulate = (coords: any) => {
     if (typeof coords[0] === "number") {
       const [tx, ty] = applyTransform(rc.transform, coords as [number, number]);
-      if (tx < minX) minX = tx;
-      if (ty < minY) minY = ty;
-      if (tx > maxX) maxX = tx;
-      if (ty > maxY) maxY = ty;
+      const [fx, fy] = camera ? applyCameraToPoint([tx, ty], camera) : [tx, ty];
+      if (fx < minX) minX = fx;
+      if (fy < minY) minY = fy;
+      if (fx > maxX) maxX = fx;
+      if (fy > maxY) maxY = fy;
       return;
     }
     for (const c of coords) accumulate(c);
@@ -160,7 +164,7 @@ export function updateBoundingVolumes(rc: RenderCountryShape): BoundingVolume {
 }
 
 /** Simple circle-based collision resolution via iterative repulsion. */
-export function resolveCollisions(shapes: RenderCountryShape[], iterations = 5): void {
+export function resolveCollisions(shapes: RenderCountryShape[], iterations = 5, camera?: CameraState): void {
   const radii = new Map<string, number>();
   const centers = new Map<string, [number, number]>();
 
@@ -168,7 +172,7 @@ export function resolveCollisions(shapes: RenderCountryShape[], iterations = 5):
     radii.clear();
     centers.clear();
     for (const s of shapes) {
-      const bounds = updateBoundingVolumes(s);
+      const bounds = updateBoundingVolumes(s, camera);
       radii.set(s.country_id, bounds.circle_screen.radius_px);
       centers.set(s.country_id, [bounds.circle_screen.cx, bounds.circle_screen.cy]);
     }

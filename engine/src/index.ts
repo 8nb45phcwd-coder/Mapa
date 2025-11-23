@@ -10,6 +10,8 @@ export {
   loadWorldDataset,
   loadTopoJSON,
   decodeGeometryByRef,
+  buildCountryMaskIndex,
+  loadHighResCountryMaskIndex,
   buildCountryAnchor,
   createRenderCountryShape,
   projectGeometry,
@@ -44,3 +46,18 @@ export {
 } from "./infrastructure.js";
 
 export { registerLayer, unregisterLayer, getLayers } from "./layers.js";
+
+export {
+  createCameraState,
+  applyZoom,
+  applyPan,
+  geoToScreen,
+  screenToGeo,
+  cameraViewport,
+  adjustCameraToViewport,
+  screenPosHybridWithCamera,
+} from "./view/camera.js";
+
+export { selectLOD, loadGeometryForLOD, mapCountriesToLODGeometry, LOD_RESOLUTIONS } from "./view/lod.js";
+
+export { buildTileIndex, tilesInView, mergeTiles } from "./view/tiles.js";

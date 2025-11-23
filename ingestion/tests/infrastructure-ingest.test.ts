@@ -102,6 +102,24 @@ describe("infrastructure ingestion", () => {
     expect(leipzig.country_id).toBe("Germany");
   });
 
+  it("keeps islands and offshore assignments coherent", async () => {
+    const result = ingestionResult;
+    const funchal = findNode("Funchal Anchorage", result.nodes)!;
+    expect(funchal.country_id).toBe("Portugal");
+    expect(funchal.offshore).toBe(false);
+    expect(ensureNodeWithinCountry(funchal, countryIndex)).toBe(true);
+
+    const offshore = findNode("Lisbon Offshore LNG", result.nodes)!;
+    expect(offshore.country_id).toBe("Portugal");
+    expect(offshore.offshore).toBe(true);
+    expect(offshore.lon).toBeCloseTo(-9.4);
+    expect(offshore.lat).toBeCloseTo(38.7);
+
+    const midAtlantic = findNode("Mid Atlantic Relay", result.nodes)!;
+    expect(midAtlantic.offshore).toBe(true);
+    expect(midAtlantic.lon).toBeCloseTo(-30);
+  });
+
   it("derives transnational sequences and keeps CRS in WGS84", async () => {
     const result = ingestionResult;
     const transmed = result.transnationalSegments.find((s) => s.name === "TransMed Gas");
@@ -113,6 +131,10 @@ describe("infrastructure ingestion", () => {
       expect(Math.abs(lon)).toBeLessThanOrEqual(180);
       expect(Math.abs(lat)).toBeLessThanOrEqual(90);
     });
+
+    const midMed = findTransnational("MidMed Gas", result.transnationalSegments)!;
+    expect(midMed.countries?.includes("Spain")).toBe(true);
+    expect(midMed.countries?.includes("France") || midMed.countries?.includes("Italy")).toBe(true);
   });
 
   it("moves internal infrastructure together with country transforms", async () => {

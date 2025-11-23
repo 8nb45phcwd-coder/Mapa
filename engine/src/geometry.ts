@@ -4,9 +4,11 @@ import type {
   AnchorPoints,
   Country,
   CountryID,
+  CountryMask,
   LodLevel,
   RenderCountryShape,
   TransformMatrix,
+  GeoMultiPolygon,
 } from "./types.js";
 import capitalAnchors from "./data/capital-coordinates.json";
 
@@ -42,6 +44,75 @@ export async function loadWorldDataset(resolution: "50m" | "110m" | string): Pro
     throw new Error(`Failed to load world dataset ${resolution}: ${res.statusText}`);
   }
   return res.json();
+}
+
+function geometryToMultiPolygon(geometry: any): GeoMultiPolygon {
+  if (!geometry || !geometry.type) throw new Error("Invalid geometry for mask");
+  if (geometry.type === "Polygon") return [geometry.coordinates];
+  if (geometry.type === "MultiPolygon") return geometry.coordinates;
+  throw new Error(`Unsupported geometry type for mask: ${geometry.type}`);
+}
+
+function computeBounds(geometry: any): [number, number, number, number] | null {
+  if (!geometry || !geometry.coordinates) return null;
+  let minLon = Infinity,
+    minLat = Infinity,
+    maxLon = -Infinity,
+    maxLat = -Infinity;
+  const traverse = (coords: any) => {
+    if (typeof coords[0] === "number") {
+      const [lon, lat] = coords as [number, number];
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+      return;
+    }
+    coords.forEach(traverse);
+  };
+  traverse(geometry.coordinates);
+  if (!Number.isFinite(minLon) || !Number.isFinite(minLat) || !Number.isFinite(maxLon) || !Number.isFinite(maxLat)) {
+    return null;
+  }
+  return [minLon, minLat, maxLon, maxLat];
+}
+
+export function buildCountryMaskIndex(
+  countries: Country[],
+  source: any,
+  decoder: (source: any, ref: string) => any = decodeGeometryByRef
+): Map<CountryID, CountryMask> {
+  const idx = new Map<CountryID, CountryMask>();
+  for (const country of countries) {
+    const geo = decoder(source, country.geometry_ref);
+    if (!geo) continue;
+    const geom = geo.geometry ?? geo;
+    const multipolygon = geometryToMultiPolygon(geom);
+    const bbox = computeBounds(geom) || undefined;
+    idx.set(country.country_id, { country_id: country.country_id, multipolygon, bbox, source_ref: country.geometry_ref });
+  }
+  return idx;
+}
+
+export async function loadHighResCountryMaskIndex(
+  countries: Country[],
+  options: { fetcher?: typeof fetch; preloaded?: Record<string, any>; resolution?: string } = {}
+): Promise<Map<CountryID, CountryMask>> {
+  const resolution = options.resolution ?? "10m";
+  const preloaded = options.preloaded?.[resolution];
+  let world = preloaded;
+  if (!world) {
+    try {
+      const mod = await import(`world-atlas/countries-${resolution}.json`, { assert: { type: "json" } } as any);
+      world = (mod as any).default ?? mod;
+    } catch (err) {
+      const loader = options.fetcher ?? fetch;
+      const res = await loader(`https://cdn.jsdelivr.net/npm/world-atlas@2/countries-${resolution}.json`);
+      if (!res.ok) throw new Error(`Failed to load high-res world ${resolution}: ${res.statusText}`);
+      world = await res.json();
+    }
+  }
+  return buildCountryMaskIndex(countries, world);
 }
 
 /** Load TopoJSON from an arbitrary URL. */
