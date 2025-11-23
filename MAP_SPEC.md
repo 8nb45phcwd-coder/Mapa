@@ -21,12 +21,12 @@ This document captures the functional and data-model requirements for the world 
 ## 3. Geometry & Projection Pipeline
 - `loadDefaultWorld` and `loadTopoJSON` fetch datasets.
 - `decodeGeometryByRef` resolves polygon/multipolygon or polyline from TopoJSON/GeoJSON using `geometry_ref` (id or name).
-- `buildCountryAnchor` computes centroid, bbox, and bounding circle for a geometry.
+- `buildCountryAnchor` computes centroid, bbox, bounding circle, and a `primary_city_anchor` seeded from a capital-coordinate dataset (fallback to centroid when absent). Values are validated to remain within valid lat/lon ranges.
 - `projectGeometry` applies an arbitrary projection (`ProjectionFn` taking `[lon,lat]`) with optional caching via `ProjectedGeometryCache` keyed by geometry reference and projection name. A level-of-detail hook (`lod` + `lodGeometryRefs`) lets callers swap simplified/detailed geometries per projection pass.
 - `prepareRenderCountryShape` orchestrates decoding, anchoring, projection, and creation of `RenderCountryShape`, accepting override geometry references, cached anchors, and LOD selection.
 
 ## 4. Layout & Clustering
-- `applyConceptLayout` places a country at its slot center or inside a cluster envelope. Cluster envelopes carry layout type, member index/count, and radius for positioning.
+- `applyConceptLayout` places a country at its slot center or inside a cluster envelope. Cluster envelopes carry layout type, member index/count, and radius for positioning. Conceptual positions stay inside `[0,1]×[0,1]` and are turned into pixels through `conceptToScreen(viewport)`; screen transforms are derived from the normalized target rather than treating concept coordinates as pixels.
 - Cluster helpers:
   - `buildClusterEnvelope` computes a center/radius from member slot coverage.
   - `buildClusterMemberEnvelopes` produces per-country envelopes for a cluster, embedding member indices to drive layouts.
@@ -48,7 +48,13 @@ This document captures the functional and data-model requirements for the world 
 - `getBorderSegmentRenderInfo` merges explicit `BorderSegmentStyle` with paint rules and optionally decodes/projects segment geometry to deliver render-ready partial-border styling.
 
 ## 7. Subdivision
-- `generateSubdivisions` creates synthetic cells per country using `AutoSubdivisionConfig` methods: `grid`, `hex`, or `voronoi`. Cells are produced in geographic coordinates based on the country anchor’s bbox/bounding circle, and a projection helper (`projectSubdivisionCells`) maps them into render space.
+- `generateSubdivisions` creates synthetic cells per country using `AutoSubdivisionConfig` methods: `grid`, `hex`, or `voronoi`. Cells are produced in geographic coordinates based on the country anchor’s bbox/bounding circle, **clipped against the actual country polygon via polygon clipping**, and a projection helper (`projectSubdivisionCells`) maps them into render space while inheriting country transforms.
+
+## 7. Infrastructure & Layers
+- **Internal infrastructure**: stored in WGS84 polylines, clipped to country polygons, and projected with country transforms.
+- **Transnational infrastructure**: dual-mode representations — geographic polylines and conceptual connectors (using country conceptual positions/capital anchors) with hybrid interpolation.
+- **Layer registry**: optional `MapLayer` objects registered by `zIndex` via `registerLayer`/`unregisterLayer`/`getLayers`. Layers consume IDs (CountryID, RegionID, etc.) and render through a renderer API without relying on screen coordinates as source of truth.
+- **Temporal extension point**: `TemporalLayer` extends `MapLayer` with optional `setTime`, maintaining snapshot compatibility.
 
 ## 8. Invariants
 - Keep source geometry immutable.

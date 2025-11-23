@@ -49,6 +49,11 @@ describe("geometry loading and anchors", () => {
     expect(anchors.bounding_circle_geo.radius_deg).toBeGreaterThan(5);
     expect(anchors.bbox_geo.maxLat).toBeGreaterThan(anchors.bbox_geo.minLat);
     expect(anchors.bbox_geo.maxLon).toBeGreaterThan(anchors.bbox_geo.minLon);
+    expect(anchors.primary_city_anchor).toBeDefined();
+    expect(anchors.primary_city_anchor![0]).toBeGreaterThan(-90);
+    expect(anchors.primary_city_anchor![0]).toBeLessThan(90);
+    expect(anchors.primary_city_anchor![1]).toBeGreaterThan(-180);
+    expect(anchors.primary_city_anchor![1]).toBeLessThan(180);
   });
 
   it("projects geometry with caching and reuses projected objects", () => {

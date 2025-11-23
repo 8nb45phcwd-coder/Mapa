@@ -46,6 +46,12 @@ export interface AnchorPoints {
   primary_city_anchor?: [number, number]; // optional, e.g. capital
 }
 
+export interface Viewport {
+  width: number;
+  height: number;
+  padding?: number; // optional padding factor (0-1) applied symmetrically
+}
+
 export interface LayoutSlot {
   slot_id: SlotID;
   x: number; // 0–1
@@ -180,13 +186,64 @@ export interface BorderSegmentRenderInfo {
 export interface SubdivisionCell {
   cell_id: string;
   country_id: CountryID;
-  polygon_geo: [number, number][][]; // simple polygon ring in [lon,lat]
+  polygon_geo: [number, number][][] | [number, number][][][]; // polygon or multipolygon rings in [lon,lat]
   centroid_geo: [number, number];
 }
 
 export interface ProjectedSubdivisionCell {
   cell_id: string;
   country_id: CountryID;
-  polygon_projected: [number, number][][];
+  polygon_projected: [number, number][][] | [number, number][][][];
   centroid_projected: [number, number];
+}
+
+export type GeoRing = [number, number][]; // [lon,lat]
+export type GeoPolygon = GeoRing[];
+export type GeoMultiPolygon = GeoPolygon[];
+
+export interface InfrastructureLine {
+  id: string;
+  country_id: CountryID;
+  geometry_geo: GeoRing; // polyline in [lon,lat]
+  kind?: string;
+}
+
+export interface ClippedInfrastructureLine extends InfrastructureLine {
+  clipped_segments: GeoRing[];
+}
+
+export interface ProjectedInfrastructureLine extends InfrastructureLine {
+  geometry_projected: [number, number][];
+}
+
+export interface TransnationalInfrastructureLine {
+  id: string;
+  countries: CountryID[];
+  geometry_geo: GeoRing;
+  kind?: string;
+}
+
+// Layers must resolve data by IDs only (CountryID/RegionID/etc.), never by absolute screen coordinates.
+export interface MapLayerContext {
+  getCountryShape(id: CountryID): RenderCountryShape | undefined;
+  getRegionShape?(id: RegionID): RenderCountryShape | undefined;
+  projection?: any;
+  viewport: { width: number; height: number };
+}
+
+export interface RendererAPI {
+  drawLine?(points: [number, number][], style?: ResolvedStyle): void;
+  drawPolygon?(polygon: any, style?: ResolvedStyle): void;
+  applyMask?(polygon: any): void;
+}
+
+export interface MapLayer {
+  id: string;
+  zIndex: number;
+  init?(ctx: MapLayerContext): void | Promise<void>;
+  render(ctx: MapLayerContext, renderer: RendererAPI): void;
+}
+
+export interface TemporalLayer extends MapLayer {
+  setTime?(t: Date | string | number | SnapshotID): void;
 }

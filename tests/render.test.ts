@@ -5,6 +5,7 @@ import {
   scaleCountry,
   updateBoundingVolumes,
   resolveCollisions,
+  conceptToScreen,
 } from "../src/render.js";
 import { createRenderCountryShape } from "../src/geometry.js";
 import type { AnchorPoints, LayoutDefinition, CountryLayoutAssignment, ClusterEnvelope } from "../src/types.js";
@@ -44,16 +45,18 @@ describe("concept layouts", () => {
 
   it("places a country at the center of its slot", () => {
     const rc = makeTriangleShape("X");
-    applyConceptLayout(rc, layout, assignment);
+    const viewport = { width: 100, height: 100 };
+    applyConceptLayout(rc, layout, assignment, undefined, viewport);
     expect(rc.conceptual_pos).toEqual([0.5, 0.5]);
-    expect(rc.transform.e).toBeCloseTo(0);
-    expect(rc.transform.f).toBeCloseTo(0);
-    expect(rc.screen_pos[0]).toBeCloseTo(0.25);
-    expect(rc.screen_pos[1]).toBeCloseTo(0.25);
+    const bounds = updateBoundingVolumes(rc);
+    const target = conceptToScreen([0.5, 0.5], viewport);
+    expect(bounds.circle_screen.cx).toBeCloseTo(target[0]);
+    expect(bounds.circle_screen.cy).toBeCloseTo(target[1]);
   });
 
   it("applies cluster-based offsets for ring layout", () => {
     const rc = makeTriangleShape("X");
+    const viewport = { width: 200, height: 100 };
     const envelope: ClusterEnvelope = {
       cluster_id: "c1",
       center_concept: [0.5, 0.5],
@@ -62,13 +65,17 @@ describe("concept layouts", () => {
       memberCount: 4,
       memberIndex: 1,
     };
-    applyConceptLayout(rc, layout, assignment, envelope);
+    applyConceptLayout(rc, layout, assignment, envelope, viewport);
     const expectedAngle = (Math.PI * 2 * 1) / 4;
     const localRadius = 0.8 * envelope.radius;
     const targetX = 0.5 + Math.cos(expectedAngle) * localRadius;
     const targetY = 0.5 + Math.sin(expectedAngle) * localRadius;
     expect(rc.conceptual_pos[0]).toBeCloseTo(targetX);
     expect(rc.conceptual_pos[1]).toBeCloseTo(targetY);
+    const bounds = updateBoundingVolumes(rc);
+    const targetScreen = conceptToScreen([targetX, targetY], viewport);
+    expect(bounds.circle_screen.cx).toBeCloseTo(targetScreen[0]);
+    expect(bounds.circle_screen.cy).toBeCloseTo(targetScreen[1]);
   });
 });
 

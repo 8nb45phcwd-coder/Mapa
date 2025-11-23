@@ -4,9 +4,12 @@ import type {
   ProjectedSubdivisionCell,
   CountryID,
   SubdivisionCell,
+  GeoMultiPolygon,
+  GeoPolygon,
 } from "./types.js";
 import type { ProjectionFn } from "./geometry.js";
-import { projectGeometry } from "./geometry.js";
+import { applyTransform, projectGeometry } from "./geometry.js";
+import * as polygonClipping from "polygon-clipping";
 
 function polygonFromBBox(bbox: { minLon: number; maxLon: number; minLat: number; maxLat: number }): [number, number][][] {
   const { minLon, maxLon, minLat, maxLat } = bbox;
@@ -31,6 +34,20 @@ function centroid(coords: [number, number][][]): [number, number] {
   });
   const n = ring.length || 1;
   return [cx / n, cy / n];
+}
+
+function centroidMulti(poly: GeoMultiPolygon): [number, number] {
+  let totalX = 0;
+  let totalY = 0;
+  let count = 0;
+  poly.forEach((p) => {
+    p[0].forEach(([lon, lat]) => {
+      totalX += lon;
+      totalY += lat;
+      count += 1;
+    });
+  });
+  return count === 0 ? [0, 0] : [totalX / count, totalY / count];
 }
 
 function buildGridCells(country_id: CountryID, anchor: AnchorPoints, cells: number): SubdivisionCell[] {
@@ -118,25 +135,61 @@ function buildVoronoiCells(country_id: CountryID, anchor: AnchorPoints, cells: n
   return result;
 }
 
+function normalizeToMultiPolygon(geometry?: any, anchor?: AnchorPoints): GeoMultiPolygon {
+  if (geometry?.type === "MultiPolygon") return geometry.coordinates as GeoMultiPolygon;
+  if (geometry?.type === "Polygon") return [geometry.coordinates as GeoPolygon];
+  if (anchor) {
+    return [polygonFromBBox(anchor.bbox_geo)];
+  }
+  return [];
+}
+
+function clipCellToGeometry(cellPolygon: GeoPolygon, country: GeoMultiPolygon): GeoMultiPolygon | null {
+  if (!country.length) return [cellPolygon];
+  const clipped = polygonClipping.intersection(country as any, [cellPolygon] as any) as GeoMultiPolygon | null;
+  if (!clipped || clipped.length === 0) return null;
+  return clipped as GeoMultiPolygon;
+}
+
 /**
  * Generate automatic subdivision cells for a country.
  */
 export function generateSubdivisions(
   country_id: CountryID,
   anchor: AnchorPoints,
-  config: AutoSubdivisionConfig
+  config: AutoSubdivisionConfig,
+  geometry?: { type: string; coordinates: any }
 ): SubdivisionCell[] {
   if (config.cells <= 0) return [];
+  const countryMulti = normalizeToMultiPolygon(geometry, anchor);
+  let base: SubdivisionCell[] = [];
   switch (config.method) {
     case "grid":
-      return buildGridCells(country_id, anchor, config.cells);
+      base = buildGridCells(country_id, anchor, config.cells);
+      break;
     case "hex":
-      return buildHexCells(country_id, anchor, config.cells);
+      base = buildHexCells(country_id, anchor, config.cells);
+      break;
     case "voronoi":
-      return buildVoronoiCells(country_id, anchor, config.cells);
+      base = buildVoronoiCells(country_id, anchor, config.cells);
+      break;
     default:
-      return [];
+      base = [];
   }
+  const clipped: SubdivisionCell[] = [];
+  for (const cell of base) {
+    const polygon = isMultiPolygon(cell.polygon_geo)
+      ? (cell.polygon_geo as GeoMultiPolygon)[0]
+      : (cell.polygon_geo as GeoPolygon);
+    const clippedPoly = clipCellToGeometry(polygon, countryMulti);
+    if (!clippedPoly) continue;
+    clipped.push({
+      ...cell,
+      polygon_geo: clippedPoly,
+      centroid_geo: centroidMulti(clippedPoly),
+    });
+  }
+  return clipped;
 }
 
 /**
@@ -144,23 +197,51 @@ export function generateSubdivisions(
  */
 export function projectSubdivisionCells(
   cells: SubdivisionCell[],
-  projection: ProjectionFn
+  projection: ProjectionFn,
+  transform?: { a: number; b: number; c: number; d: number; e: number; f: number }
 ): ProjectedSubdivisionCell[] {
   return cells.map((cell) => {
-    const projected = projectGeometry(
-      { type: "Polygon", coordinates: cell.polygon_geo },
-      projection
-    );
-    const centroid = projected.coordinates[0].reduce(
-      (acc: [number, number], coord: [number, number]) => [acc[0] + coord[0], acc[1] + coord[1]],
-      [0, 0]
-    );
-    const n = projected.coordinates[0].length || 1;
+    const geometryType = isMultiPolygon(cell.polygon_geo) ? "MultiPolygon" : "Polygon";
+    const coordinates = geometryType === "Polygon"
+      ? (cell.polygon_geo as GeoPolygon)
+      : (cell.polygon_geo as GeoMultiPolygon);
+    const geo = geometryType === "Polygon" ? { type: "Polygon", coordinates } : { type: "MultiPolygon", coordinates };
+    const projected = projectGeometry(geo, projection);
+    const transformedCoords = transform
+      ? mapProjected(projected.coordinates, (pt) => applyTransform(transform, pt as [number, number]))
+      : projected.coordinates;
+    const centroid = computeProjectedCentroid(transformedCoords as any);
     return {
       cell_id: cell.cell_id,
       country_id: cell.country_id,
-      polygon_projected: projected.coordinates as [number, number][][],
-      centroid_projected: [centroid[0] / n, centroid[1] / n] as [number, number],
+      polygon_projected: transformedCoords as any,
+      centroid_projected: centroid,
     };
   });
+}
+
+function mapProjected(coords: any, fn: (p: [number, number]) => [number, number]): any {
+  if (typeof coords[0] === "number") return fn(coords as [number, number]);
+  return coords.map((c: any) => mapProjected(c, fn));
+}
+
+function computeProjectedCentroid(coords: GeoPolygon | GeoMultiPolygon): [number, number] {
+  let sx = 0;
+  let sy = 0;
+  let count = 0;
+  const walk = (c: any) => {
+    if (typeof c[0] === "number") {
+      sx += c[0];
+      sy += c[1];
+      count += 1;
+      return;
+    }
+    for (const child of c) walk(child);
+  };
+  walk(coords as any);
+  return count === 0 ? [0, 0] : [sx / count, sy / count];
+}
+
+function isMultiPolygon(coords: any): coords is GeoMultiPolygon {
+  return Array.isArray(coords) && Array.isArray(coords[0]) && Array.isArray(coords[0][0]) && Array.isArray(coords[0][0][0]);
 }

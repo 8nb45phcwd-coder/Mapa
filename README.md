@@ -65,13 +65,13 @@ High-level core types (see `MAP_SPEC.md` for full definitions):
   - `Region`: optional subnational polygons.
   - `Unit`: point entities (cities, ports, mines, border crossings, etc.).
 - **Anchors**:
-  - `AnchorPoints`: centroid, bounding box, bounding circle for each country.
+  - `AnchorPoints`: centroid, bounding box, bounding circle, and **primary capital city anchor** for each country (preloaded from a capital coordinates dataset; validated per country).
 - **Layouts & clusters**:
   - `LayoutDefinition`, `LayoutSlot`, `CountryLayoutAssignment`.
   - `Cluster` with layout types: `"stack" | "grid" | "ring" | "cloud"`.
   - `ClusterEnvelope`: runtime hull for visual grouping.
 - **Render state**:
-  - `RenderCountryShape`: projected geometry + conceptual position + transform matrix.
+  - `RenderCountryShape`: projected geometry + conceptual position + transform matrix (conceptual coordinates live strictly in `[0,1]×[0,1]` and are normalized to screen space via `conceptToScreen`).
   - `BoundingVolume`: screen-space bounding box and circle for collision/repulsion.
 - **Borders**:
   - `BorderPoint`: point features on borders (checkpoints, choke points, etc.).
@@ -80,6 +80,10 @@ High-level core types (see `MAP_SPEC.md` for full definitions):
 - **Styling**:
   - `PaintRule`: generic style rules for countries, regions, clusters, slots, border segments.
   - `ResolvedStyle`: resolved style object used by renderers.
+- **Infrastructure & layers**:
+  - Helpers to clip internal infrastructure polylines to country polygons and project them with inherited transforms.
+  - Transnational infrastructure supports geographic and conceptual render paths with hybrid interpolation.
+  - A minimal layer registry (`registerLayer`, `unregisterLayer`, `getLayers`) to stack optional layers by `zIndex` while relying on IDs rather than screen coordinates.
 
 The engine itself is **UI-agnostic**: it is not tied to Canvas, SVG, WebGL, React, etc.  
 It exposes **data and transforms** that any renderer can use.

@@ -24,6 +24,7 @@ export {
   updateBoundingVolumes,
   resolveCollisions,
   resetTransform,
+  conceptToScreen,
 } from "./render.js";
 
 export { interpolatePositions, interpolateTransform, screenPosHybrid } from "./interpolate.js";
@@ -33,3 +34,11 @@ export { resolvePaintFor, getBorderSegmentRenderInfo } from "./style.js";
 export { buildClusterEnvelope, buildClusterMemberEnvelopes } from "./layout.js";
 
 export { generateSubdivisions, projectSubdivisionCells } from "./subdivision.js";
+
+export {
+  clipInternalInfrastructure,
+  projectInfrastructureLine,
+  buildTransnationalHybridPath,
+} from "./infrastructure.js";
+
+export { registerLayer, unregisterLayer, getLayers } from "./layers.js";

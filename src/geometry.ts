@@ -8,6 +8,15 @@ import type {
   RenderCountryShape,
   TransformMatrix,
 } from "./types.js";
+import capitalAnchors from "./data/capital-coordinates.json" assert { type: "json" };
+
+const normalizedCapitalAnchors = (() => {
+  const norm = new Map<string, [number, number]>();
+  Object.entries(capitalAnchors as Record<string, [number, number]>).forEach(([name, coords]) => {
+    norm.set(normalizeName(name), coords as [number, number]);
+  });
+  return norm;
+})();
 
 export type ProjectionFn = (coords: [number, number]) => [number, number];
 
@@ -92,6 +101,8 @@ export function buildCountryAnchor(geometry: any, country: Country): AnchorPoint
   }
   const radiusDeg = (maxDistanceRad * 180) / Math.PI;
 
+  const primary = resolvePrimaryCityAnchor(country, centerLatLon);
+
   return {
     centroid_geo: centerLatLon,
     bbox_geo: bbox,
@@ -99,6 +110,7 @@ export function buildCountryAnchor(geometry: any, country: Country): AnchorPoint
       center: centerLatLon,
       radius_deg: radiusDeg,
     },
+    primary_city_anchor: primary,
   };
 }
 
@@ -274,6 +286,23 @@ function resolveGeometryRef(
       ? lodGeometryRefs.get(lod)
       : lodGeometryRefs[String(lod)] ?? lodGeometryRefs[lod as any];
   return lookup || baseRef;
+}
+
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim();
+}
+
+function resolvePrimaryCityAnchor(country: Country, fallback: [number, number]): [number, number] {
+  const key = normalizeName(country.name || country.geometry_ref || "");
+  const fromCapital = normalizedCapitalAnchors.get(key);
+  if (fromCapital && Number.isFinite(fromCapital[0]) && Number.isFinite(fromCapital[1])) {
+    return fromCapital as [number, number];
+  }
+  return fallback;
 }
 
 /** Apply transform matrix to a single [x,y] point. */

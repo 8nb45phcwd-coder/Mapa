@@ -41,6 +41,7 @@ describe("real world topojson integration", () => {
     expect(anchors.bbox_geo.maxLat).toBeGreaterThan(anchors.bbox_geo.minLat);
     expect(anchors.bbox_geo.maxLon).toBeGreaterThan(anchors.bbox_geo.minLon);
     expect(anchors.bounding_circle_geo.radius_deg).toBeGreaterThan(0);
+    expect(anchors.primary_city_anchor).toBeTruthy();
   });
 
   it("prepares a render shape end-to-end with projection and caching", () => {

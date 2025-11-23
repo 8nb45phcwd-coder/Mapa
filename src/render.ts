@@ -5,8 +5,20 @@ import type {
   CountryLayoutAssignment,
   LayoutDefinition,
   RenderCountryShape,
+  Viewport,
 } from "./types.js";
 import { applyTransform, IDENTITY_TRANSFORM } from "./geometry.js";
+
+/** Map concept-space coordinates [0,1]x[0,1] into screen-space pixels. */
+export function conceptToScreen(pos: [number, number], viewport: Viewport): [number, number] {
+  const padX = viewport.padding ? viewport.width * viewport.padding : 0;
+  const padY = viewport.padding ? viewport.height * viewport.padding : 0;
+  const w = Math.max(0, viewport.width - padX * 2);
+  const h = Math.max(0, viewport.height - padY * 2);
+  const cx = Math.min(1, Math.max(0, pos[0]));
+  const cy = Math.min(1, Math.max(0, pos[1]));
+  return [padX + cx * w, padY + cy * h];
+}
 
 function computeClusterLayoutOffset(
   layoutType: ClusterLayoutType,
@@ -51,7 +63,8 @@ export function applyConceptLayout(
   rc: RenderCountryShape,
   layout: LayoutDefinition,
   assignment: CountryLayoutAssignment,
-  clusterEnvelope?: ClusterEnvelope
+  clusterEnvelope?: ClusterEnvelope,
+  viewport: Viewport = { width: 1, height: 1 }
 ): void {
   if (assignment.layout_id !== layout.layout_id) {
     throw new Error(
@@ -81,15 +94,14 @@ export function applyConceptLayout(
     return slotCenter;
   })();
 
-  rc.conceptual_pos = targetConceptPos;
+  rc.conceptual_pos = [Math.min(1, Math.max(0, targetConceptPos[0])), Math.min(1, Math.max(0, targetConceptPos[1]))];
 
-  // Translate the projected geometry so its current center aligns with the conceptual position.
+  const targetScreen = conceptToScreen(rc.conceptual_pos, viewport);
+
+  // Translate the projected geometry so its current center aligns with the conceptual position in screen-space.
   const bounds = updateBoundingVolumes(rc);
   const currentCenter: [number, number] = [bounds.circle_screen.cx, bounds.circle_screen.cy];
-  const offset: [number, number] = [
-    targetConceptPos[0] - currentCenter[0],
-    targetConceptPos[1] - currentCenter[1],
-  ];
+  const offset: [number, number] = [targetScreen[0] - currentCenter[0], targetScreen[1] - currentCenter[1]];
   detachCountry(rc, offset);
 }
 
