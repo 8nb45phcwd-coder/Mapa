@@ -1,0 +1,17 @@
+{
+  "name": "world-map-ingestion",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "d3-geo": "^3.1.0",
+    "proj4": "^2.11.0",
+    "topojson-client": "^3.1.0",
+    "world-map-engine": "^1.0.0"
+  }
+}
