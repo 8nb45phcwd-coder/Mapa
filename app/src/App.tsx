@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { feature } from "topojson-client";
-import { geoMercator } from "d3-geo";
+import { geoDistance, geoMercator } from "d3-geo";
 import {
   applyCameraToPoint,
   conceptToScreen,
@@ -173,6 +173,15 @@ const paletteColor = (group: string, scheme?: SchemeDefinition) => {
   return GROUP_COLORS[idx % GROUP_COLORS.length];
 };
 
+const lengthKm = (coords: [number, number][]): number => {
+  if (coords.length < 2) return 0;
+  let total = 0;
+  for (let i = 1; i < coords.length; i += 1) {
+    total += geoDistance(coords[i - 1], coords[i]) * 6371;
+  }
+  return total;
+};
+
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [viewport, setViewport] = useState(DEFAULT_VIEWPORT);
@@ -193,6 +202,7 @@ const App: React.FC = () => {
   const [infra, setInfra] = useState<IngestedInfrastructure | null>(null);
   const [infraStatus, setInfraStatus] = useState<string>("idle");
   const [lodLevel, setLodLevel] = useState<string>("medium");
+  const [borderLodOverride, setBorderLodOverride] = useState<"auto" | "hi" | "low">("auto");
   const lodCacheRef = useRef<Map<string, any>>(new Map());
   const anchorCacheRef = useRef<Map<string, AnchorPoints>>(new Map());
   const geometryCacheRef = useRef<ProjectedGeometryCache>(new ProjectedGeometryCache());
@@ -235,6 +245,11 @@ const App: React.FC = () => {
   );
 
   const borderSemanticsList = useMemo(() => getBaseBorderSemantics(), []);
+
+  const selectedSegment = useMemo(() => {
+    if (!selectedBorderId) return null;
+    return borderSegments.find((seg) => formatBorderSegmentId(seg.id) === selectedBorderId) ?? null;
+  }, [borderSegments, selectedBorderId]);
 
   const ensureLodGeometry = useCallback(
     async (levelName: string) => {
@@ -354,6 +369,19 @@ const App: React.FC = () => {
     rebuildShapes(topo, lodLevel, countries, featureCollection);
   }, [countries, featureCollection, lodLevel, rebuildShapes, viewport]);
 
+  const getSegmentCoords = useCallback(
+    (segment: BorderSegment) => {
+      if (borderLodOverride === "low") {
+        return segment.geometry.coords_low_res ?? segment.geometry.coords_hi_res;
+      }
+      if (borderLodOverride === "hi") {
+        return segment.geometry.coords_hi_res;
+      }
+      return getBorderSegmentGeometryForLOD(segment, camera.zoom);
+    },
+    [borderLodOverride, camera.zoom]
+  );
+
   const drawScene = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !projection) return;
@@ -400,7 +428,7 @@ const App: React.FC = () => {
           (offsetA[0] + offsetB[0]) / 2,
           (offsetA[1] + offsetB[1]) / 2,
         ];
-        const coords = getBorderSegmentGeometryForLOD(segment, camera.zoom).map((pt) => [
+        const coords = getSegmentCoords(segment).map((pt) => [
           pt[0] + avgOffset[0],
           pt[1] + avgOffset[1],
         ]) as [number, number][];
@@ -508,6 +536,7 @@ const App: React.FC = () => {
     camera,
     conceptOffsets,
     infra,
+    getSegmentCoords,
     layers,
     projection,
     scheme,
@@ -561,7 +590,7 @@ const App: React.FC = () => {
           (offsetA[0] + offsetB[0]) / 2,
           (offsetA[1] + offsetB[1]) / 2,
         ];
-        const coords = getBorderSegmentGeometryForLOD(segment, camera.zoom).map((pt) => [
+        const coords = getSegmentCoords(segment).map((pt) => [
           pt[0] + avgOffset[0],
           pt[1] + avgOffset[1],
         ]) as [number, number][];
@@ -589,6 +618,28 @@ const App: React.FC = () => {
   const selectedSegmentSemantics = selectedBorderId
     ? borderSemanticsList.find((s) => s.segment_id === selectedBorderId)
     : undefined;
+
+  const selectedHiCoords = selectedSegment?.geometry.coords_hi_res ?? [];
+  const selectedLowCoords = selectedSegment?.geometry.coords_low_res ?? [];
+  const selectedHiLength = selectedHiCoords.length ? lengthKm(selectedHiCoords) : 0;
+  const selectedLowLength = selectedLowCoords.length ? lengthKm(selectedLowCoords) : null;
+  const selectedLengthDiffPct =
+    selectedLowLength !== null && selectedHiLength > 0
+      ? ((selectedLowLength - selectedHiLength) / selectedHiLength) * 100
+      : null;
+
+  const currentLodMode =
+    borderLodOverride === "auto"
+      ? `${selectLOD(camera.zoom)} (auto)`
+      : `${borderLodOverride === "hi" ? "hi-res" : "low-res"} (manual)`;
+
+  const toggleBorderLodOverride = () => {
+    setBorderLodOverride((prev) => {
+      if (prev === "auto") return "low";
+      if (prev === "low") return "hi";
+      return "auto";
+    });
+  };
 
   const updateZoom = (zoom: number) => {
     setCamera((cam) => ({ ...cam, zoom: Math.max(0.2, Math.min(5, zoom)) }));
@@ -748,6 +799,44 @@ const App: React.FC = () => {
           </div>
         ) : (
           <p>Select a country or border segment.</p>
+        )}
+
+        <h3>Border LOD Debug</h3>
+        <div className="debug-row">Current zoom: {camera.zoom.toFixed(2)}</div>
+        <div className="debug-row">Current LOD mode: {currentLodMode}</div>
+        <div className="debug-row">Selected segment: {selectedBorderId ?? "None"}</div>
+        <button className="debug-toggle" onClick={toggleBorderLodOverride}>
+          Toggle border LOD (auto → low → hi)
+        </button>
+        {selectedSegment ? (
+          <div className="debug-grid">
+            <div>
+              <div className="debug-label">Hi-res vertices</div>
+              <div className="debug-value">{selectedHiCoords.length}</div>
+            </div>
+            <div>
+              <div className="debug-label">Low-res vertices</div>
+              <div className="debug-value">{selectedLowCoords.length || "n/a"}</div>
+            </div>
+            <div>
+              <div className="debug-label">Length (hi)</div>
+              <div className="debug-value">{selectedHiLength.toFixed(2)} km</div>
+            </div>
+            <div>
+              <div className="debug-label">Length (low)</div>
+              <div className="debug-value">
+                {selectedLowLength !== null ? `${selectedLowLength.toFixed(2)} km` : "n/a"}
+              </div>
+            </div>
+            <div>
+              <div className="debug-label">Difference</div>
+              <div className="debug-value">
+                {selectedLengthDiffPct !== null ? `${selectedLengthDiffPct.toFixed(2)}%` : "n/a"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="status-row">Select a border to inspect geometry.</p>
         )}
 
         <h3>Quick Queries</h3>
