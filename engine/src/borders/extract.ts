@@ -19,6 +19,8 @@ function lineLengthKm(coords: [number, number][]): number {
   return total;
 }
 
+const LOW_RES_LENGTH_DELTA_LIMIT = 0.1;
+
 // simple Douglas–Peucker simplifier for optional low-res output
 function simplifyLine(coords: [number, number][], tolerance = 0.05): [number, number][] {
   if (coords.length <= 2) return coords.slice();
@@ -242,10 +244,30 @@ export function extractBorderSegments(
         ? `${segment.country_a}-SEA`
         : canonicalPair(segment.country_a, segment.country_b).key;
       const lines = lowLines.get(key);
-      if (!lines || lines.length === 0) return;
+      const hiCoords = segment.geometry.coords_hi_res;
+      const simplifyFallback = () => {
+        if (!segment.geometry.coords_low_res) {
+          segment.geometry.coords_low_res = hiCoords.map(([lon, lat]) => [lon, lat] as [number, number]);
+        }
+      };
+
+      if (!lines || lines.length === 0) {
+        simplifyFallback();
+        return;
+      }
+
       const chosen = lines[Math.min(segment.id.index, lines.length - 1)];
       if (chosen?.length) {
-        segment.geometry.coords_low_res = chosen;
+        const hiLen = lineLengthKm(hiCoords);
+        const lowLen = lineLengthKm(chosen);
+        const withinTolerance = hiLen > 0
+          ? Math.abs(hiLen - lowLen) / hiLen <= LOW_RES_LENGTH_DELTA_LIMIT
+          : false;
+        segment.geometry.coords_low_res = withinTolerance
+          ? chosen
+          : hiCoords.map(([lon, lat]) => [lon, lat] as [number, number]);
+      } else {
+        simplifyFallback();
       }
     });
   }
