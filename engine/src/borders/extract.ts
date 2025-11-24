@@ -78,16 +78,16 @@ function createSegment(
   countryA: CountryID,
   countryB: CountryID | "SEA",
   coords: [number, number][],
-  pairCounters: Map<string, number>
+  pairCounters: Map<string, number>,
+  includeSimplifiedLowRes: boolean
 ): BorderSegment {
   const { a, b, key } = canonicalPair(countryA, countryB);
   const idx = pairCounters.get(key) ?? 0;
   pairCounters.set(key, idx + 1);
   const id: BorderSegmentId = { country_a: a, country_b: b, index: idx };
-  const geometry: BorderSegmentGeometry = {
-    coords_hi_res: coords,
-    coords_low_res: simplifyLine(coords),
-  };
+  const geometry: BorderSegmentGeometry = includeSimplifiedLowRes
+    ? { coords_hi_res: coords, coords_low_res: simplifyLine(coords) }
+    : { coords_hi_res: coords };
   const segment: BorderSegment = {
     id,
     country_a: a,
@@ -112,6 +112,62 @@ function sharedMesh(topology: any, obj: any, geomA: any, geomB: any): any {
   return mesh(topology, obj, (a, b) => (a === geomA && b === geomB) || (a === geomB && b === geomA));
 }
 
+function extractLowResBorderLines(countries: Country[], topo: any): Map<string, [number, number][][]> {
+  const objKey = Object.keys(topo.objects).find((k) => k.toLowerCase().includes("country")) ||
+    Object.keys(topo.objects)[0];
+  const countryObj = topo.objects[objKey];
+  const fc: any = feature(topo, countryObj);
+  const geometries = countryObj.geometries as any[];
+  const geomToCountry = assignCountryLookup(countries, fc, geometries);
+  const pairLines = new Map<string, [number, number][][]>();
+
+  const pushLine = (key: string, coords: [number, number][]) => {
+    if (!coords || coords.length < 2) return;
+    const list = pairLines.get(key);
+    if (list) list.push(coords);
+    else pairLines.set(key, [coords]);
+  };
+
+  const neighborList = neighbors(geometries);
+  neighborList.forEach((adj, i) => {
+    const geomA = geometries[i];
+    const countryA = geomToCountry.get(geomA);
+    if (!countryA) return;
+    adj.forEach((j) => {
+      if (j < i) return;
+      const geomB = geometries[j];
+      const countryB = geomToCountry.get(geomB);
+      if (!countryB) return;
+      const shared = sharedMesh(topo, countryObj, geomA, geomB);
+      geometryLines(shared).forEach((coords) => {
+        const { key } = canonicalPair(countryA.country_id, countryB.country_id);
+        pushLine(key, coords);
+      });
+    });
+  });
+
+  geometries.forEach((geom, idx) => {
+    const country = geomToCountry.get(geom);
+    if (!country) return;
+    const coast = coastlineMesh(topo, countryObj, geom);
+    const coastLines = geometryLines(coast);
+    if (coastLines.length > 0) {
+      coastLines.forEach((coords) => pushLine(`${country.country_id}-SEA`, coords));
+    } else {
+      const featureForGeom = fc.features[idx];
+      const geomGeo = featureForGeom.geometry ?? featureForGeom;
+      const multipoly = geomGeo.type === "Polygon" ? [geomGeo.coordinates] : geomGeo.coordinates;
+      multipoly.forEach((poly: [number, number][][]) => {
+        if (!poly?.length) return;
+        const ring = poly[0];
+        pushLine(`${country.country_id}-SEA`, ring);
+      });
+    }
+  });
+
+  return pairLines;
+}
+
 export interface BorderExtractionResult {
   segments: BorderSegment[];
 }
@@ -132,6 +188,7 @@ export function extractBorderSegments(
 
   const segments: BorderSegment[] = [];
   const pairCounters = new Map<string, number>();
+  const useSimplifiedFallback = !topoLow;
 
   const neighborList = neighbors(geometries);
   neighborList.forEach((adj, i) => {
@@ -146,7 +203,9 @@ export function extractBorderSegments(
       const shared = sharedMesh(topoHigh, countryObj, geomA, geomB);
       geometryLines(shared).forEach((coords) => {
         if (coords.length < 2) return;
-        segments.push(createSegment(countryA.country_id, countryB.country_id, coords, pairCounters));
+        segments.push(
+          createSegment(countryA.country_id, countryB.country_id, coords, pairCounters, useSimplifiedFallback)
+        );
       });
     });
   });
@@ -160,7 +219,7 @@ export function extractBorderSegments(
     if (coastLines.length > 0) {
       coastLines.forEach((coords) => {
         if (coords.length < 2) return;
-        segments.push(createSegment(country.country_id, "SEA", coords, pairCounters));
+        segments.push(createSegment(country.country_id, "SEA", coords, pairCounters, useSimplifiedFallback));
       });
     } else {
       // Fallback: use exterior rings from the country's own geometry to avoid dropping islands.
@@ -170,10 +229,26 @@ export function extractBorderSegments(
       multipoly.forEach((poly: [number, number][][]) => {
         if (!poly?.length) return;
         const ring = poly[0];
-        if (ring.length >= 2) segments.push(createSegment(country.country_id, "SEA", ring, pairCounters));
+        if (ring.length >= 2)
+          segments.push(createSegment(country.country_id, "SEA", ring, pairCounters, useSimplifiedFallback));
       });
     }
   });
+
+  if (topoLow) {
+    const lowLines = extractLowResBorderLines(countries, topoLow);
+    segments.forEach((segment) => {
+      const key = segment.country_b === "SEA"
+        ? `${segment.country_a}-SEA`
+        : canonicalPair(segment.country_a, segment.country_b).key;
+      const lines = lowLines.get(key);
+      if (!lines || lines.length === 0) return;
+      const chosen = lines[Math.min(segment.id.index, lines.length - 1)];
+      if (chosen?.length) {
+        segment.geometry.coords_low_res = chosen;
+      }
+    });
+  }
 
   return { segments: segments.map(ensureSegmentKey) };
 }
