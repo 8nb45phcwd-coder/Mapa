@@ -199,6 +199,9 @@ const App: React.FC = () => {
   const shapeMapRef = useRef<Map<string, RenderCountryShape>>(new Map());
   const [borderSegments, setBorderSegments] = useState<BorderSegment[]>([]);
   const [borderSemanticsMap, setBorderSemanticsMap] = useState<Map<string, string[]>>(new Map());
+  const [borderSemanticScheme, setBorderSemanticScheme] = useState<string>(
+    () => getBaseBorderSemantics()[0]?.tags[0] ?? "schengen_internal"
+  );
   const [infra, setInfra] = useState<IngestedInfrastructure | null>(null);
   const [infraStatus, setInfraStatus] = useState<string>("idle");
   const [lodLevel, setLodLevel] = useState<string>("medium");
@@ -245,6 +248,20 @@ const App: React.FC = () => {
   );
 
   const borderSemanticsList = useMemo(() => getBaseBorderSemantics(), []);
+
+  const borderSemanticTags = useMemo(() => {
+    const tags = new Set<string>();
+    borderSemanticsList.forEach((entry) => entry.tags.forEach((t) => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [borderSemanticsList]);
+
+  const borderSemanticSummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    borderSemanticsList.forEach((entry) => {
+      entry.tags.forEach((t) => counts.set(t, (counts.get(t) ?? 0) + 1));
+    });
+    return counts;
+  }, [borderSemanticsList]);
 
   const selectedSegment = useMemo(() => {
     if (!selectedBorderId) return null;
@@ -619,6 +636,12 @@ const App: React.FC = () => {
     ? borderSemanticsList.find((s) => s.segment_id === selectedBorderId)
     : undefined;
 
+  const selectedSegmentTagged = useMemo(() => {
+    if (!selectedBorderId || !borderSemanticScheme) return false;
+    const entry = borderSemanticsList.find((s) => s.segment_id === selectedBorderId);
+    return entry?.tags.includes(borderSemanticScheme) ?? false;
+  }, [borderSemanticScheme, borderSemanticsList, selectedBorderId]);
+
   const selectedHiCoords = selectedSegment?.geometry.coords_hi_res ?? [];
   const selectedLowCoords = selectedSegment?.geometry.coords_low_res ?? [];
   const selectedHiLength = selectedHiCoords.length ? lengthKm(selectedHiCoords) : 0;
@@ -838,6 +861,52 @@ const App: React.FC = () => {
         ) : (
           <p className="status-row">Select a border to inspect geometry.</p>
         )}
+
+        <h3>Border semantics debug</h3>
+        <div className="debug-row">
+          Current scheme:
+          <select
+            value={borderSemanticScheme}
+            onChange={(evt) => setBorderSemanticScheme(evt.target.value)}
+            style={{ marginLeft: 8 }}
+          >
+            {borderSemanticTags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+        </div>
+        {selectedSegment ? (
+          <div className="debug-grid">
+            <div>
+              <div className="debug-label">Segment</div>
+              <div className="debug-value">{formatBorderSegmentId(selectedSegment.id)}</div>
+            </div>
+            <div>
+              <div className="debug-label">Countries</div>
+              <div className="debug-value">
+                {selectedSegment.country_a} / {selectedSegment.country_b}
+              </div>
+            </div>
+            <div>
+              <div className="debug-label">Tagged?</div>
+              <div className="debug-value">{selectedSegmentTagged ? "Yes" : "No"}</div>
+            </div>
+          </div>
+        ) : (
+          <p className="status-row">Select a border to inspect semantics.</p>
+        )}
+        <div>
+          <strong>Tagged segments per scheme</strong>
+          <ul className="info-list">
+            {borderSemanticTags.map((tag) => (
+              <li key={tag}>
+                {tag}: {borderSemanticSummary.get(tag) ?? 0}
+              </li>
+            ))}
+          </ul>
+        </div>
 
         <h3>Quick Queries</h3>
         <p>NATO members tagged: {getBaseSchemeMembers("geo_political_blocs", "nato").length}</p>
