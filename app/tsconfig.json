@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
+    "types": ["vite/client"],
+    "baseUrl": "./",
+    "paths": {
+      "world-map-engine": ["../engine/src/index.ts"],
+      "world-map-engine/*": ["../engine/src/*"],
+      "world-map-ingestion": ["../ingestion/src/index.ts"],
+      "world-map-ingestion/*": ["../ingestion/src/*"],
+      "world-map-world-model": ["../world_model/src/index.ts"],
+      "world-map-world-model/*": ["../world_model/src/*"]
+    }
+  },
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
+}
