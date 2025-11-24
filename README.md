@@ -8,7 +8,11 @@ A TypeScript library for building a **world-scale map engine** that:
 - Can **style and highlight partial border segments**, not just whole countries.
 - Is designed to be **extended** with domain logic (flows, sanctions, markets, mobility, etc.) without changing the core geography.
 
-This repository provides the **core engine**, not a full application.
+This repository provides the **core engine**, not a full application. The codebase is split into:
+
+- `engine/`: rendering and layout kernel (previously the `src/` root).
+- `ingestion/`: real-world infrastructure ingestion (pipelines, cables, ports, nodes) with reprojection and clipping.
+- `world_model/`: placeholder for future country/world-system metadata (no logic yet).
 
 ---
 
@@ -44,7 +48,7 @@ The engine is designed to work with **real world geometry**, not hard-coded samp
 Recommended data source (Natural Earth via world-atlas):
 
 - TopoJSON:  
-  `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json`
+  `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json` (110m remains available for low-LOD rendering)
 
 You can either:
 
@@ -65,13 +69,13 @@ High-level core types (see `MAP_SPEC.md` for full definitions):
   - `Region`: optional subnational polygons.
   - `Unit`: point entities (cities, ports, mines, border crossings, etc.).
 - **Anchors**:
-  - `AnchorPoints`: centroid, bounding box, bounding circle for each country.
+  - `AnchorPoints`: centroid, bounding box, bounding circle, and **primary capital city anchor** for each country (preloaded from a capital coordinates dataset; validated per country).
 - **Layouts & clusters**:
   - `LayoutDefinition`, `LayoutSlot`, `CountryLayoutAssignment`.
   - `Cluster` with layout types: `"stack" | "grid" | "ring" | "cloud"`.
   - `ClusterEnvelope`: runtime hull for visual grouping.
 - **Render state**:
-  - `RenderCountryShape`: projected geometry + conceptual position + transform matrix.
+  - `RenderCountryShape`: projected geometry + conceptual position + transform matrix (conceptual coordinates live strictly in `[0,1]×[0,1]` and are normalized to screen space via `conceptToScreen`).
   - `BoundingVolume`: screen-space bounding box and circle for collision/repulsion.
 - **Borders**:
   - `BorderPoint`: point features on borders (checkpoints, choke points, etc.).
@@ -80,6 +84,11 @@ High-level core types (see `MAP_SPEC.md` for full definitions):
 - **Styling**:
   - `PaintRule`: generic style rules for countries, regions, clusters, slots, border segments.
   - `ResolvedStyle`: resolved style object used by renderers.
+- **Infrastructure & layers**:
+  - Helpers to clip internal infrastructure polylines to country polygons and project them with inherited transforms.
+  - Transnational infrastructure supports geographic and conceptual render paths with hybrid interpolation.
+  - Phase 2 ingestion targets real feeds (GEM pipelines, TeleGeography cables/landings, ENTSO-E/OSM interconnectors, World Port Index ports, GPPD plants, GEM/USGS mines, OurAirports/OSM cargo hubs), reprojects via proj4 into WGS84, clips internal assets, densifies traversal to recover micro-crossings, and assigns countries with edge-aware tolerance.
+  - A minimal layer registry (`registerLayer`, `unregisterLayer`, `getLayers`) to stack optional layers by `zIndex` while relying on IDs rather than screen coordinates.
 
 The engine itself is **UI-agnostic**: it is not tied to Canvas, SVG, WebGL, React, etc.  
 It exposes **data and transforms** that any renderer can use.
@@ -127,6 +136,7 @@ The engine must:
 	•	From TopoJSON/GeoJSON (e.g. world-atlas).
 	•	Compute AnchorPoints for each country.
 	•	Produce RenderCountryShape instances with projected polygons.
+	•	Swap geometry references per level-of-detail via preparation options.
 	2.	Support conceptual layouts
 	•	Layouts defined by LayoutDefinition + LayoutSlot.
 	•	Countries assigned to slots via CountryLayoutAssignment.
@@ -150,6 +160,8 @@ The engine must:
 	7.	Support partial borders
 	•	BorderSegment must allow styling only a section of the border A–B, not the whole boundary.
 	•	Geometry for each segment should sit on the real border line.
+	8.	Synthetic subdivisions
+	•	Generate grid/hex/voronoi cells in geo-space and project them alongside country geometry for styling.
 
 ⸻
 

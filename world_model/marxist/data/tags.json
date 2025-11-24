@@ -1,0 +1,14 @@
+{
+  "PRT": {
+    "world_system_position": "core_dependent",
+    "global_north_south": "global_north"
+  },
+  "ESP": {
+    "world_system_position": "core_dependent",
+    "global_north_south": "global_north"
+  },
+  "BRA": {
+    "world_system_position": "semi_periphery",
+    "global_north_south": "global_south"
+  }
+}

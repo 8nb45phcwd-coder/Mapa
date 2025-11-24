@@ -1,0 +1,74 @@
+/**
+ * World Map Engine Core
+ * ---------------------
+ * Stateless, projection-agnostic mapping kernel for interactive conceptual layouts.
+ */
+export * from "./types.js";
+export {
+  loadDefaultWorld,
+  loadWorld110m,
+  loadWorldDataset,
+  loadTopoJSON,
+  decodeGeometryByRef,
+  buildCountryMaskIndex,
+  loadHighResCountryMaskIndex,
+  buildCountryAnchor,
+  createRenderCountryShape,
+  projectGeometry,
+  ProjectedGeometryCache,
+  IDENTITY_TRANSFORM,
+  applyTransform,
+  prepareRenderCountryShape,
+} from "./geometry.js";
+
+export {
+  applyConceptLayout,
+  detachCountry,
+  scaleCountry,
+  updateBoundingVolumes,
+  resolveCollisions,
+  resetTransform,
+  conceptToScreen,
+} from "./render.js";
+
+export { interpolatePositions, interpolateTransform, screenPosHybrid } from "./interpolate.js";
+
+export { resolvePaintFor, getBorderSegmentRenderInfo } from "./style.js";
+
+export { buildClusterEnvelope, buildClusterMemberEnvelopes } from "./layout.js";
+
+export { generateSubdivisions, projectSubdivisionCells } from "./subdivision.js";
+
+export {
+  clipInternalInfrastructure,
+  projectInfrastructureLine,
+  buildTransnationalHybridPath,
+} from "./infrastructure.js";
+
+export { registerLayer, unregisterLayer, getLayers } from "./layers.js";
+
+export {
+  createCameraState,
+  applyZoom,
+  applyPan,
+  geoToScreen,
+  screenToGeo,
+  cameraViewport,
+  adjustCameraToViewport,
+  screenPosHybridWithCamera,
+} from "./view/camera.js";
+
+export { selectLOD, loadGeometryForLOD, mapCountriesToLODGeometry, LOD_RESOLUTIONS } from "./view/lod.js";
+
+export { buildTileIndex, tilesInView, mergeTiles } from "./view/tiles.js";
+
+export {
+  initializeBorderIndex,
+  getAllBorderSegments,
+  getBorderSegmentsForCountry,
+  getBorderSegmentsBetween,
+  getBorderIndex,
+} from "./borders/api.js";
+
+export { getBorderSegmentGeometryForLOD } from "./borders/lod.js";
+export { formatBorderSegmentId } from "./borders/types.js";
