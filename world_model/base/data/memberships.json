@@ -1,0 +1,731 @@
+{
+  "memberships": [
+    {
+      "scheme": "geo_political_blocs",
+      "group": "nato",
+      "source": "NATO official membership list",
+      "members": [
+        "ALB",
+        "BEL",
+        "BGR",
+        "CAN",
+        "HRV",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "ISL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MNE",
+        "NLD",
+        "MKD",
+        "NOR",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "TUR",
+        "GBR",
+        "USA"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "eu_core",
+      "source": "EU membership used as customs union proxy",
+      "members": [
+        "AUT",
+        "BEL",
+        "BGR",
+        "HRV",
+        "CYP",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "IRL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "eu_periphery",
+      "source": "placeholder empty periphery",
+      "members": []
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "five_eyes",
+      "source": "Five Eyes partnership",
+      "members": [
+        "AUS",
+        "CAN",
+        "GBR",
+        "NZL",
+        "USA"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "g7",
+      "source": "G7 members",
+      "members": [
+        "CAN",
+        "FRA",
+        "DEU",
+        "ITA",
+        "JPN",
+        "GBR",
+        "USA"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "quad",
+      "source": "Quad security dialogue",
+      "members": [
+        "AUS",
+        "IND",
+        "JPN",
+        "USA"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "mnna",
+      "source": "US Major Non-NATO Allies",
+      "members": [
+        "ARG",
+        "AUS",
+        "BHR",
+        "BRA",
+        "EGY",
+        "ISR",
+        "JOR",
+        "JPN",
+        "KWT",
+        "MAR",
+        "NZL",
+        "PAK",
+        "PHL",
+        "QAT",
+        "THA",
+        "TUN"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "brics",
+      "source": "BRICS bloc",
+      "members": [
+        "BRA",
+        "RUS",
+        "IND",
+        "CHN",
+        "ZAF"
+      ]
+    },
+    {
+      "scheme": "geo_political_blocs",
+      "group": "sco",
+      "source": "Shanghai Cooperation Organisation",
+      "members": [
+        "CHN",
+        "IND",
+        "KAZ",
+        "KGZ",
+        "PAK",
+        "RUS",
+        "TJK",
+        "UZB",
+        "IRN"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "eu_customs_union",
+      "source": "EU customs union membership",
+      "members": [
+        "AUT",
+        "BEL",
+        "BGR",
+        "HRV",
+        "CYP",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "IRL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "eea",
+      "source": "European Economic Area",
+      "members": [
+        "AUT",
+        "BEL",
+        "BGR",
+        "HRV",
+        "CYP",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "ISL",
+        "IRL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "NOR",
+        "POL",
+        "PRT",
+        "ROU",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE",
+        "LIE"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "mercosur",
+      "source": "Mercosur members",
+      "members": [
+        "ARG",
+        "BRA",
+        "PRY",
+        "URY"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "asean",
+      "source": "ASEAN members",
+      "members": [
+        "BRN",
+        "KHM",
+        "IDN",
+        "LAO",
+        "MYS",
+        "MMR",
+        "PHL",
+        "SGP",
+        "THA",
+        "VNM"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "gcc",
+      "source": "Gulf Cooperation Council",
+      "members": [
+        "BHR",
+        "KWT",
+        "OMN",
+        "QAT",
+        "SAU",
+        "ARE"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "usmca",
+      "source": "USMCA members",
+      "members": [
+        "USA",
+        "CAN",
+        "MEX"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "afcfta",
+      "source": "African Continental Free Trade Area (sample)",
+      "members": [
+        "NGA",
+        "ZAF",
+        "EGY",
+        "KEN",
+        "GHA",
+        "ETH",
+        "DZA",
+        "AGO",
+        "CIV",
+        "SEN"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "opec",
+      "source": "OPEC members",
+      "members": [
+        "DZA",
+        "AGO",
+        "COG",
+        "IRN",
+        "IRQ",
+        "KWT",
+        "LBY",
+        "NGA",
+        "SAU",
+        "ARE",
+        "VEN",
+        "GAB"
+      ]
+    },
+    {
+      "scheme": "economic_blocs",
+      "group": "bri",
+      "source": "Belt and Road Initiative signatories (sample)",
+      "members": [
+        "CHN",
+        "PAK",
+        "KEN",
+        "ETH",
+        "EGY",
+        "SAU",
+        "ARE",
+        "ITA",
+        "PRT"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "imf_program",
+      "source": "IMF program participants (sample)",
+      "members": [
+        "PAK",
+        "UKR",
+        "ARG"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "imf_creditor",
+      "source": "IMF creditor nations (sample)",
+      "members": [
+        "USA",
+        "GBR",
+        "DEU",
+        "JPN",
+        "CHN",
+        "FRA"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "wto_member",
+      "source": "WTO members (representative subset)",
+      "members": [
+        "ARG",
+        "AUS",
+        "BRA",
+        "CAN",
+        "CHL",
+        "CHN",
+        "COL",
+        "CZE",
+        "DNK",
+        "EGY",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "IND",
+        "IDN",
+        "IRL",
+        "ISR",
+        "ITA",
+        "JPN",
+        "KEN",
+        "KOR",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MEX",
+        "NLD",
+        "NZL",
+        "NOR",
+        "PAK",
+        "PER",
+        "PHL",
+        "POL",
+        "PRT",
+        "ROU",
+        "RUS",
+        "SAU",
+        "SGP",
+        "SVK",
+        "SVN",
+        "ZAF",
+        "ESP",
+        "SWE",
+        "CHE",
+        "TUR",
+        "UKR",
+        "ARE",
+        "GBR",
+        "USA",
+        "VNM"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "bis_member",
+      "source": "BIS members (sample)",
+      "members": [
+        "USA",
+        "GBR",
+        "DEU",
+        "FRA",
+        "ITA",
+        "CHE",
+        "SWE",
+        "NOR",
+        "CAN",
+        "JPN",
+        "AUS",
+        "NLD"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "fatf_grey",
+      "source": "FATF grey list (sample)",
+      "members": [
+        "PAK",
+        "TUR",
+        "NGA"
+      ]
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "fatf_black",
+      "source": "FATF black list (sample)",
+      "members": []
+    },
+    {
+      "scheme": "financial_structures",
+      "group": "tax_haven",
+      "source": "Known tax haven jurisdictions (sample)",
+      "members": [
+        "LUX",
+        "CYM",
+        "PAN",
+        "BHS"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "ecowas",
+      "source": "ECOWAS members",
+      "members": [
+        "BEN",
+        "BFA",
+        "CPV",
+        "CIV",
+        "GMB",
+        "GHA",
+        "GIN",
+        "GNB",
+        "LBR",
+        "MLI",
+        "NER",
+        "NGA",
+        "SEN",
+        "SLE",
+        "TGO"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "sadc",
+      "source": "SADC members",
+      "members": [
+        "AGO",
+        "BWA",
+        "COD",
+        "COM",
+        "LSO",
+        "MDG",
+        "MWI",
+        "MUS",
+        "MOZ",
+        "NAM",
+        "SYC",
+        "ZAF",
+        "SWZ",
+        "TZA",
+        "ZMB"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "au",
+      "source": "African Union (sample)",
+      "members": [
+        "DZA",
+        "AGO",
+        "KEN",
+        "NGA",
+        "ZAF",
+        "EGY",
+        "ETH",
+        "GHA",
+        "SEN",
+        "CMR"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "caricom",
+      "source": "CARICOM members",
+      "members": [
+        "ATG",
+        "BHS",
+        "BRB",
+        "BLZ",
+        "DMA",
+        "GRD",
+        "GUY",
+        "HTI",
+        "JAM",
+        "LCA",
+        "VCT",
+        "SUR",
+        "TTO"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "celac",
+      "source": "CELAC members (sample)",
+      "members": [
+        "ARG",
+        "BOL",
+        "BRA",
+        "CHL",
+        "COL",
+        "CUB",
+        "DOM",
+        "ECU",
+        "SLV",
+        "GTM",
+        "HND",
+        "MEX",
+        "NIC",
+        "PAN",
+        "PRY",
+        "PER",
+        "URY",
+        "VEN",
+        "CRI"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "cis",
+      "source": "Commonwealth of Independent States",
+      "members": [
+        "ARM",
+        "AZE",
+        "BLR",
+        "KAZ",
+        "KGZ",
+        "MDA",
+        "RUS",
+        "TJK",
+        "UZB"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "arab_league",
+      "source": "Arab League",
+      "members": [
+        "DZA",
+        "BHR",
+        "COM",
+        "DJI",
+        "EGY",
+        "IRQ",
+        "JOR",
+        "KWT",
+        "LBN",
+        "LBY",
+        "MRT",
+        "MAR",
+        "OMN",
+        "PSE",
+        "QAT",
+        "SAU",
+        "SOM",
+        "SDN",
+        "SYR",
+        "TUN",
+        "ARE",
+        "YEM"
+      ]
+    },
+    {
+      "scheme": "regional_organizations",
+      "group": "schengen_area",
+      "source": "Schengen Area",
+      "members": [
+        "AUT",
+        "BEL",
+        "CZE",
+        "DNK",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "HUN",
+        "ISL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "NOR",
+        "POL",
+        "PRT",
+        "SVK",
+        "SVN",
+        "ESP",
+        "SWE",
+        "CHE",
+        "LIE",
+        "HRV"
+      ]
+    },
+    {
+      "scheme": "currency_systems",
+      "group": "usd_formal",
+      "source": "USD formal users",
+      "members": [
+        "USA",
+        "ECU",
+        "SLV",
+        "MHL",
+        "FSM",
+        "PLW",
+        "TCA",
+        "VGB"
+      ]
+    },
+    {
+      "scheme": "currency_systems",
+      "group": "usd_informal",
+      "source": "USD informal circulation (sample)",
+      "members": [
+        "KHM",
+        "ZWE",
+        "LBN"
+      ]
+    },
+    {
+      "scheme": "currency_systems",
+      "group": "euro_formal",
+      "source": "Eurozone",
+      "members": [
+        "AUT",
+        "BEL",
+        "HRV",
+        "CYP",
+        "EST",
+        "FIN",
+        "FRA",
+        "DEU",
+        "GRC",
+        "IRL",
+        "ITA",
+        "LVA",
+        "LTU",
+        "LUX",
+        "MLT",
+        "NLD",
+        "PRT",
+        "SVK",
+        "SVN",
+        "ESP"
+      ]
+    },
+    {
+      "scheme": "currency_systems",
+      "group": "euro_informal",
+      "source": "Euro informal users",
+      "members": [
+        "AND",
+        "MCO",
+        "SMR"
+      ]
+    },
+    {
+      "scheme": "currency_systems",
+      "group": "yuan_integration",
+      "source": "Yuan trade/settlement integration (sample)",
+      "members": [
+        "CHN",
+        "PAK",
+        "RUS",
+        "KAZ"
+      ]
+    }
+  ]
+}
