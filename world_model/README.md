@@ -1,15 +1,19 @@
-# World Model (Data Scaffold)
+# World Model (Semantic Layer)
 
-This package provides neutral, ID-driven metadata scaffolding for country-level classifications. It purposely avoids any inferred or subjective assignments while offering consistent data shapes and a typed API for future layers.
+This package provides neutral, ID-driven metadata for countries, classification schemes, language relationships, and border-level semantic tags. All assignments are deterministic and curated; no inference or automatic classification is performed here.
 
 ## Data files
-- `data/countries.json`: ISO-driven country metadata (ISO3 id, ISO2, common name, UN region and subregion, ISO numeric) aligned with the engine country set.
-- `data/schemes.json`: Declared classification schemes and groups (world-system, geopolitical blocs, economic blocs, etc.) with no country assignments.
-- `data/tags.json`: Per-country tag skeletons with `null` (exclusive schemes) or empty arrays (non-exclusive schemes) for every scheme.
+- `data/countries.json`: ISO-aligned country metadata (ISO3 id, ISO2, ISO numeric, English/native names, UN region/subregion).
+- `data/schemes.json`: Catalogue of supported schemes (world-system, geopolitical and economic blocs, financial/legal flags, regional orgs, currency systems, primary language) with exclusivity and allowed groups.
+- `data/tags/`: Per-country scheme assignments. `base.json` carries neutral defaults; `core_examples.json` adds a small set of curated examples.
+- `data/languages.json`: Language metadata (code, family, regions, participating country ids) for language-aware queries.
+- `data/border_semantics.json`: Example semantic tags for specific border segments (e.g., Schengen internal borders, coastlines).
 
-## API
-Exposed via `world_map_world_model` (see `src/index.ts`):
-- `loadCountries`, `loadSchemes`, `loadCountryTags`
-- `getCountryMeta`, `getCountryTagSnapshot`
+## API (src)
+- Countries: `getAllCountries`, `getCountryMeta`, `loadCountries`
+- Schemes: `getAllSchemes`, `getSchemeById`, `loadSchemes`
+- Tags: `getAllCountryTags`, `getCountryTagSnapshot`, `getCountriesByTag`, `loadCountryTags`
+- Languages: `getAllLanguages`, `getLanguageByCode`, `getCountriesByLanguage`, `getSharedLanguageNeighbours`
+- Border semantics: `getBorderSemantics`, `getBorderSemanticsBySegmentId`, `getSegmentsBySemanticTag`
 
-All scheme assignments are intentionally empty; future phases will populate them using curated sources.
+Assignments are intentionally limited to a handful of examples; future work will expand `data/tags` and `data/border_semantics` via explicit, curated sources.
