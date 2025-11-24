@@ -1,0 +1,8 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./engine" },
+    { "path": "./ingestion" },
+    { "path": "./world_model" }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "segments": [
+    {
+      "segment_id": "ESP-PRT-0",
+      "tags": ["land_border", "eu_internal", "schengen_internal"]
+    },
+    {
+      "segment_id": "ESP-PRT-1",
+      "tags": ["land_border", "eu_internal", "schengen_internal"]
+    },
+    {
+      "segment_id": "DEU-POL-0",
+      "tags": ["land_border", "schengen_internal"]
+    },
+    {
+      "segment_id": "FRA-GBR-0",
+      "tags": ["maritime_border", "channel_crossing"]
+    },
+    {
+      "segment_id": "PRT-SEA-0",
+      "tags": ["coastline"]
+    }
+  ]
+}
