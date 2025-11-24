@@ -19,6 +19,9 @@ const countries: Country[] = countriesFeatureCollection.features.map((f: any) =>
 }));
 
 const getId = (name: string) => countries.find((c) => c.name === name)?.country_id ?? "";
+const prtId = getId("Portugal");
+const espId = getId("Spain");
+const islId = getId("Iceland");
 
 beforeAll(() => {
   initializeBorderIndex({ countries, topojsonHigh: world50 as any, topojsonLow: world110 as any });
@@ -26,7 +29,7 @@ beforeAll(() => {
 
 describe("border adjacency extraction", () => {
   it("extracts well-known neighbouring borders", () => {
-    const prtEsp = getBorderSegmentsBetween(getId("Portugal"), getId("Spain"));
+    const prtEsp = getBorderSegmentsBetween(prtId, espId);
     const fraDeu = getBorderSegmentsBetween(getId("France"), getId("Germany"));
     const usaCan = getBorderSegmentsBetween(getId("United States of America"), getId("Canada"));
     const braPrt = getBorderSegmentsBetween(getId("Brazil"), getId("Portugal"));
@@ -37,7 +40,7 @@ describe("border adjacency extraction", () => {
   });
 
   it("produces canonical ordering and contiguous indices", () => {
-    const prtEsp = getBorderSegmentsBetween(getId("Portugal"), getId("Spain"));
+    const prtEsp = getBorderSegmentsBetween(prtId, espId);
     prtEsp.forEach((seg) => {
       expect(seg.id.country_a < seg.id.country_b).toBe(true);
     });
@@ -50,7 +53,7 @@ describe("border adjacency extraction", () => {
 
 describe("border geometry fidelity", () => {
   it("returns hi-res coords that sit on country boundaries", () => {
-    const prtEsp = getBorderSegmentsBetween(getId("Portugal"), getId("Spain"));
+    const prtEsp = getBorderSegmentsBetween(prtId, espId);
     const first = prtEsp[0];
     expect(first.geometry.coords_hi_res.length).toBeGreaterThan(1);
     const [lon, lat] = first.geometry.coords_hi_res[0];
@@ -59,18 +62,30 @@ describe("border geometry fidelity", () => {
   });
 
   it("generates coastline segments for island nations", () => {
-    const iceland = getBorderSegmentsForCountry(getId("Iceland"));
+    const iceland = getBorderSegmentsForCountry(islId);
     expect(iceland.length).toBeGreaterThan(0);
     expect(iceland.every((s) => s.country_b === "SEA")).toBe(true);
   });
 
-  it("provides LOD-aware geometry", () => {
-    const prtEsp = getBorderSegmentsBetween(getId("Portugal"), getId("Spain"));
+  it("prefers low-res geometry at low zoom and hi-res afterwards", () => {
+    const prtEsp = getBorderSegmentsBetween(prtId, espId);
     const seg = prtEsp[0];
+    expect(seg.geometry.coords_low_res?.length).toBeGreaterThan(1);
     const low = getBorderSegmentGeometryForLOD(seg, 0.5);
+    const mid = getBorderSegmentGeometryForLOD(seg, 2);
+    expect(low).toEqual(seg.geometry.coords_low_res);
+    expect(mid).toEqual(seg.geometry.coords_hi_res);
+  });
+
+  it("retains coastline geometry for islands across LODs", () => {
+    const iceland = getBorderSegmentsForCountry(islId);
+    const seg = iceland[0];
+    const low = getBorderSegmentGeometryForLOD(seg, 0.2);
     const hi = getBorderSegmentGeometryForLOD(seg, 3);
-    expect(low.length).toBeLessThanOrEqual(seg.geometry.coords_hi_res.length);
-    expect(hi).toEqual(seg.geometry.coords_hi_res);
+    expect(low.length).toBeGreaterThan(1);
+    expect(hi.length).toBeGreaterThan(1);
+    expect(low[0][0]).toBeGreaterThanOrEqual(-180);
+    expect(hi[0][1]).toBeLessThanOrEqual(90);
   });
 });
 
