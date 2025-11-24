@@ -1,0 +1,32 @@
+{
+  "languages": [
+    {
+      "code": "pt",
+      "name_en": "Portuguese",
+      "family": "Romance",
+      "regions": ["Europe", "Latin America", "Africa"],
+      "country_ids": ["PRT", "BRA", "AGO", "MOZ", "CPV", "GNB", "STP", "TLS"]
+    },
+    {
+      "code": "es",
+      "name_en": "Spanish",
+      "family": "Romance",
+      "regions": ["Europe", "Latin America"],
+      "country_ids": ["ESP", "ARG", "COL", "PER", "MEX", "CHL", "URY", "PRY", "BOL", "CRI", "GTM", "HND", "NIC", "SLV", "PAN", "CUB", "DOM", "ECU", "VEN"]
+    },
+    {
+      "code": "en",
+      "name_en": "English",
+      "family": "Germanic",
+      "regions": ["Europe", "North America", "Oceania", "Africa", "Asia"],
+      "country_ids": ["GBR", "USA", "CAN", "AUS", "NZL", "IRL", "ZAF", "NGA", "IND", "SGP"]
+    },
+    {
+      "code": "fr",
+      "name_en": "French",
+      "family": "Romance",
+      "regions": ["Europe", "Africa", "North America"],
+      "country_ids": ["FRA", "BEL", "CAN", "CHE", "CIV", "SEN", "CMR", "COD", "NER", "TCD"]
+    }
+  ]
+}

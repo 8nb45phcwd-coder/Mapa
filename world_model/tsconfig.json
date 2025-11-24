@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": true,
+    "composite": true
+  },
+  "include": ["src/**/*", "base/**/*", "marxist/**/*"],
+  "exclude": ["dist", "node_modules"],
+  "references": [{ "path": "../engine" }]
+}
