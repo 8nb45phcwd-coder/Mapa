@@ -1,10 +1,10 @@
-import borderSemanticData from "../data/border_semantics.json" assert { type: "json" };
-import type { BorderSemanticCatalog, BorderSemanticEntry } from "./types.js";
+import borderSemanticsData from "../../base/data/border_semantics.json" assert { type: "json" };
+import type { BorderSemanticCatalog, BorderSemanticEntry } from "../types.js";
 
-const catalog: BorderSemanticCatalog = borderSemanticData as BorderSemanticCatalog;
+const catalog: BorderSemanticCatalog = borderSemanticsData as BorderSemanticCatalog;
 const byId = new Map<string, BorderSemanticEntry>(catalog.segments.map((s) => [s.segment_id, s]));
 
-export function getBorderSemantics(): BorderSemanticEntry[] {
+export function getBaseBorderSemantics(): BorderSemanticEntry[] {
   return catalog.segments;
 }
 

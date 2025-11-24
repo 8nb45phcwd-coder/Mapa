@@ -1,19 +1,33 @@
-# World Model (Semantic Layer)
+# world_model
 
-This package provides neutral, ID-driven metadata for countries, classification schemes, language relationships, and border-level semantic tags. All assignments are deterministic and curated; no inference or automatic classification is performed here.
+The `world_model` workspace is a neutral semantic layer that sits alongside the core engine and ingestion packages.
+It now has two distinct layers:
 
-## Data files
-- `data/countries.json`: ISO-aligned country metadata (ISO3 id, ISO2, ISO numeric, English/native names, UN region/subregion).
-- `data/schemes.json`: Catalogue of supported schemes (world-system, geopolitical and economic blocs, financial/legal flags, regional orgs, currency systems, primary language) with exclusivity and allowed groups.
-- `data/tags/`: Per-country scheme assignments. `base.json` carries neutral defaults; `core_examples.json` adds a small set of curated examples.
-- `data/languages.json`: Language metadata (code, family, regions, participating country ids) for language-aware queries.
-- `data/border_semantics.json`: Example semantic tags for specific border segments (e.g., Schengen internal borders, coastlines).
+- **base**: authoritative, factual memberships (NATO, EU/Schengen, WTO/IMF/BIS/FATF, currency systems, languages, etc.) sourced via refreshable fetch scripts and stored under `base/data/`.
+- **marxist**: manually curated analytical classifications (e.g., world-system position, global north/south) stored under `marxist/data/` without affecting factual data.
 
-## API (src)
-- Countries: `getAllCountries`, `getCountryMeta`, `loadCountries`
-- Schemes: `getAllSchemes`, `getSchemeById`, `loadSchemes`
-- Tags: `getAllCountryTags`, `getCountryTagSnapshot`, `getCountriesByTag`, `loadCountryTags`
-- Languages: `getAllLanguages`, `getLanguageByCode`, `getCountriesByLanguage`, `getSharedLanguageNeighbours`
-- Border semantics: `getBorderSemantics`, `getBorderSemanticsBySegmentId`, `getSegmentsBySemanticTag`
+## Structure
+- `base/data/` – countries, schemes, memberships, languages, border semantics produced by fetchers.
+- `base/fetch/` – refresh scripts that pull external lists and write JSON fixtures (`npm run world-model:refresh`).
+- `src/base/` – typed loaders and query helpers for base facts.
+- `marxist/data/` – analytical scheme definitions and seed tag examples.
+- `src/marxist/` – loaders for marxist tags and schemes.
+- `src/index.ts` – unified API exposing base and marxist helpers without affecting the engine or ingestion packages.
 
-Assignments are intentionally limited to a handful of examples; future work will expand `data/tags` and `data/border_semantics` via explicit, curated sources.
+## Refreshing base facts
+Run the refresh pipeline from the repo root (manual/CI only, never in tests):
+
+```bash
+npm run world-model:refresh
+```
+
+This will fetch external membership lists where URLs are provided, fall back to existing fixtures if offline, and rewrite `base/data/memberships.json`.
+
+## Testing
+`npm test` from the repo root covers:
+- base data integrity (countries, schemes, memberships, language coverage, border semantics),
+- marxist tag structure validity,
+- factual sanity checks for NATO/EU/Schengen/WTO, and
+- integration with the engine’s border segment index.
+
+All data access is local and deterministic; no network is used during tests.

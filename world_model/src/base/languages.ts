@@ -1,10 +1,18 @@
-import languagesData from "../data/languages.json" assert { type: "json" };
-import type { CountryId, LanguageCatalog, LanguageInfo } from "./types.js";
+import languagesData from "../../base/data/languages.json" assert { type: "json" };
+import type { CountryId, LanguageCatalog, LanguageInfo } from "../types.js";
 
 const catalog: LanguageCatalog = languagesData as LanguageCatalog;
 const byCode = new Map<string, LanguageInfo>(catalog.languages.map((l) => [l.code, l]));
+const byCountry = new Map<CountryId, string[]>();
+for (const lang of catalog.languages) {
+  for (const cid of lang.country_ids) {
+    const arr = byCountry.get(cid) ?? [];
+    arr.push(lang.code);
+    byCountry.set(cid, arr);
+  }
+}
 
-export function getAllLanguages(): LanguageInfo[] {
+export function getBaseLanguages(): LanguageInfo[] {
   return catalog.languages;
 }
 
@@ -14,6 +22,10 @@ export function getLanguageByCode(code: string): LanguageInfo | undefined {
 
 export function getCountriesByLanguage(code: string): CountryId[] {
   return byCode.get(code)?.country_ids ?? [];
+}
+
+export function getLanguageCodesForCountry(countryId: CountryId): string[] {
+  return byCountry.get(countryId) ?? [];
 }
 
 export function getSharedLanguageNeighbours(languageCode: string): Array<{ country_a: CountryId; country_b: CountryId }> {

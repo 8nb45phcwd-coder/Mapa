@@ -1,28 +1,6 @@
 {
   "schemes": [
     {
-      "id": "world_system_position",
-      "label": "World-System Position",
-      "exclusive": true,
-      "groups": [
-        "core_imperialist",
-        "core_dependent",
-        "semi_periphery",
-        "periphery_extractive",
-        "socialist_or_anti_imperialist"
-      ]
-    },
-    {
-      "id": "global_north_south",
-      "label": "Global North / South",
-      "exclusive": true,
-      "groups": [
-        "global_north",
-        "global_south",
-        "transitional_or_ambiguous"
-      ]
-    },
-    {
       "id": "geo_political_blocs",
       "label": "Geopolitical Blocs",
       "exclusive": false,
@@ -79,7 +57,8 @@
         "caricom",
         "celac",
         "cis",
-        "arab_league"
+        "arab_league",
+        "schengen_area"
       ]
     },
     {

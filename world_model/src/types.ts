@@ -22,13 +22,25 @@ export interface SchemeCatalog {
   schemes: SchemeDefinition[];
 }
 
-export type SchemeAssignment = string | string[] | null;
-
-export interface CountryTagEntry {
-  [schemeId: string]: SchemeAssignment;
+export interface MembershipEntry {
+  scheme: string;
+  group: string;
+  members: CountryId[];
+  source?: string;
+  fetched_at?: string;
 }
 
-export type CountryTags = Record<CountryId, CountryTagEntry>;
+export interface MembershipCatalog {
+  memberships: MembershipEntry[];
+}
+
+export interface CountryTags {
+  [schemeId: string]: string | string[] | null;
+}
+
+export interface CountryTagMap {
+  [countryId: CountryId]: CountryTags;
+}
 
 export interface LanguageInfo {
   code: string;
@@ -49,4 +61,14 @@ export interface BorderSemanticEntry {
 
 export interface BorderSemanticCatalog {
   segments: BorderSemanticEntry[];
+}
+
+export interface MarxistTagEntry {
+  world_system_position?: string | null;
+  global_north_south?: string | null;
+  [schemeId: string]: string | string[] | null | undefined;
+}
+
+export interface MarxistTagMap {
+  [countryId: CountryId]: MarxistTagEntry;
 }

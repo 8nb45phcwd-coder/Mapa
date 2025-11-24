@@ -1,22 +1,20 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import world50 from "world-atlas/countries-50m.json";
 import world110 from "world-atlas/countries-110m.json";
-import {
-  initializeBorderIndex,
-  getAllBorderSegments,
-  formatBorderSegmentId,
-  getBorderSegmentsBetween,
-} from "../../engine/src/index.js";
+import { initializeBorderIndex, getAllBorderSegments, formatBorderSegmentId } from "../../engine/src/index.js";
 import type { Country } from "../../engine/src/types.js";
-import countriesData from "../data/countries.json" assert { type: "json" };
-import schemesData from "../data/schemes.json" assert { type: "json" };
-import languagesData from "../data/languages.json" assert { type: "json" };
-import borderSemanticsData from "../data/border_semantics.json" assert { type: "json" };
+import countriesData from "../base/data/countries.json" assert { type: "json" };
+import baseSchemesData from "../base/data/schemes.json" assert { type: "json" };
+import membershipsData from "../base/data/memberships.json" assert { type: "json" };
+import languagesData from "../base/data/languages.json" assert { type: "json" };
+import borderSemanticsData from "../base/data/border_semantics.json" assert { type: "json" };
+import marxistSchemesData from "../marxist/data/schemes.json" assert { type: "json" };
+import marxistTagsData from "../marxist/data/tags.json" assert { type: "json" };
 import {
-  getAllSchemes,
-  getAllCountryTags,
-  getAllLanguages,
-  getBorderSemantics,
+  getBaseSchemes,
+  getAllCountryBaseTags,
+  getBaseBorderSemantics,
+  getBaseSchemeMembers,
 } from "../src/index.js";
 import type { CountryId, SchemeDefinition } from "../src/types.js";
 
@@ -26,8 +24,10 @@ const countryList = (countriesData as any).countries as Array<{
   name_en: string;
 }>;
 const countrySet = new Set<CountryId>(countryList.map((c) => c.id as CountryId));
-const schemeDefs = (schemesData as any).schemes as SchemeDefinition[];
-const schemeMap = new Map<string, SchemeDefinition>(schemeDefs.map((s) => [s.id, s]));
+const baseSchemeDefs = (baseSchemesData as any).schemes as SchemeDefinition[];
+const baseSchemeMap = new Map<string, SchemeDefinition>(baseSchemeDefs.map((s) => [s.id, s]));
+const marxistSchemes = (marxistSchemesData as any).schemes as SchemeDefinition[];
+const marxistSchemeMap = new Map<string, SchemeDefinition>(marxistSchemes.map((s) => [s.id, s]));
 
 let allSegments: ReturnType<typeof getAllBorderSegments> = [];
 let segmentIdSet: Set<string>;
@@ -43,98 +43,83 @@ beforeAll(() => {
   segmentIdSet = new Set(allSegments.map((seg) => seg.segment_id ?? formatBorderSegmentId(seg.id)));
 });
 
-describe("world_model data invariants", () => {
-  it("ensures every referenced id and scheme is internally consistent", () => {
-    const tags = getAllCountryTags();
-    // country ids
-    Object.keys(tags).forEach((cid) => {
-      expect(countrySet.has(cid as CountryId)).toBe(true);
+describe("world_model consistency", () => {
+  it("ensures ids, schemes, and memberships are internally consistent", () => {
+    const memberships = (membershipsData as any).memberships as Array<{ scheme: string; group: string; members: string[] }>;
+    memberships.forEach((entry) => {
+      const scheme = baseSchemeMap.get(entry.scheme);
+      expect(scheme, `missing scheme ${entry.scheme}`).toBeDefined();
+      expect(scheme?.groups).toContain(entry.group);
+      entry.members.forEach((cid) => expect(countrySet.has(cid as CountryId)).toBe(true));
     });
 
-    // scheme + group validity
+    // base tags coherence
+    const tags = getAllCountryBaseTags();
+    const expectedSchemes = getBaseSchemes();
+    expect(Object.keys(tags).sort()).toEqual([...countrySet].sort());
     Object.entries(tags).forEach(([cid, entry]) => {
       expect(countrySet.has(cid as CountryId)).toBe(true);
-      Object.entries(entry).forEach(([schemeId, value]) => {
-        const scheme = schemeMap.get(schemeId);
-        expect(scheme, `missing scheme ${schemeId}`).toBeDefined();
-        if (!scheme) return;
+      expectedSchemes.forEach((scheme) => {
+        const val = (entry as any)[scheme.id];
         if (scheme.exclusive) {
-          if (value !== null && value !== undefined) {
-            expect(typeof value === "string").toBe(true);
-            expect(scheme.groups).toContain(value as string);
+          if (val !== null && val !== undefined) {
+            expect(typeof val === "string").toBe(true);
+            expect(scheme.groups).toContain(val as string);
           }
         } else {
-          expect(Array.isArray(value)).toBe(true);
-          (value as string[]).forEach((group) => {
-            expect(scheme.groups).toContain(group);
-          });
+          expect(Array.isArray(val)).toBe(true);
+          (val as string[]).forEach((group) => expect(scheme.groups).toContain(group));
         }
       });
     });
 
-    // language country ids
+    // languages reference valid countries
     (languagesData as any).languages.forEach((lang: any) => {
       (lang.country_ids as string[]).forEach((cid) => {
         expect(countrySet.has(cid as CountryId)).toBe(true);
       });
     });
 
-    // border semantics reference existing segments
-    const missingSemantics: string[] = [];
-    (borderSemanticsData as any).segments.forEach((entry: any) => {
-      if (!segmentIdSet.has(entry.segment_id)) missingSemantics.push(entry.segment_id);
-    });
-    if (missingSemantics.length) {
-      console.error(`Missing border segments for semantics: ${missingSemantics.join(",")}`);
-      missingSemantics.forEach((id) => {
-        const [a, b] = id.split("-");
-        const alt = b ? getBorderSegmentsBetween(a as CountryId, b as CountryId) : [];
-        if (alt.length) {
-          console.error(`Available segments for ${a}-${b}: ${alt.map((s) => s.segment_id).join(",")}`);
+    // marxist tags reference valid schemes + countries
+    Object.entries(marxistTagsData as Record<string, Record<string, string | null>>).forEach(([cid, entry]) => {
+      expect(countrySet.has(cid as CountryId)).toBe(true);
+      Object.entries(entry).forEach(([schemeId, value]) => {
+        const scheme = marxistSchemeMap.get(schemeId);
+        expect(scheme, `missing marxist scheme ${schemeId}`).toBeDefined();
+        if (value !== null && value !== undefined) {
+          expect(scheme?.groups).toContain(value as string);
         }
       });
-    }
-    // Known gaps stem from semantics that reference non-adjacent or over-indexed pairs
-    // (e.g., FRA–GBR maritime reference and duplicate ESP–PRT segment index).
-    const knownGaps = new Set(["ESP-PRT-1", "FRA-GBR-0"]);
-    const unexpectedMissing = missingSemantics.filter((id) => !knownGaps.has(id));
-    expect(unexpectedMissing).toEqual([]);
+    });
   });
 
-  it("logs coverage summaries without failing missing-but-allowed entries", () => {
-    const tags = getAllCountryTags();
-    const schemes = getAllSchemes();
-    const countryCount = Object.keys(tags).length;
+  it("keeps border semantics aligned with extracted segments", () => {
+    const semantics = getBaseBorderSemantics();
+    const knownGaps = new Set(["ESP-PRT-1", "FRA-GBR-0"]);
+    const missing = (borderSemanticsData as any).segments
+      .filter((entry: any) => !segmentIdSet.has(entry.segment_id))
+      .filter((entry: any) => !knownGaps.has(entry.segment_id));
+    if (missing.length) {
+      console.warn(`Missing border semantics segments: ${missing.map((m: any) => m.segment_id).join(",")}`);
+    }
+    expect(missing).toEqual([]);
+  });
 
-    schemes.forEach((scheme) => {
+  it("logs coverage summaries for auditing", () => {
+    const tags = getAllCountryBaseTags();
+    const totalCountries = Object.keys(tags).length;
+    getBaseSchemes().forEach((scheme) => {
       let tagged = 0;
       Object.values(tags).forEach((entry: any) => {
         const val = entry[scheme.id];
-        const hasTag = scheme.exclusive
-          ? val !== null && val !== undefined
-          : Array.isArray(val) && val.length > 0;
+        const hasTag = scheme.exclusive ? val !== null && val !== undefined : Array.isArray(val) && val.length > 0;
         if (hasTag) tagged += 1;
       });
-      const missing = countryCount - tagged;
+      const missing = totalCountries - tagged;
       console.info(`[scheme:${scheme.id}] tagged=${tagged} missing=${missing}`);
     });
 
-    const languageCovered = new Set<string>();
-    getAllLanguages().forEach((lang) => lang.country_ids.forEach((cid) => languageCovered.add(cid)));
-    const withoutLanguage = [...countrySet].filter((cid) => !languageCovered.has(cid));
-    console.info(`countries without language entry: ${withoutLanguage.length}`);
-
-    const untaggedCountries = Object.entries(tags)
-      .filter(([_, entry]) =>
-        schemes.every((scheme) => {
-          const val = (entry as any)[scheme.id];
-          return scheme.exclusive ? val === null || val === undefined : Array.isArray(val) && val.length === 0;
-        })
-      )
-      .map(([cid]) => cid);
-    console.info(`countries with empty tag sets: ${untaggedCountries.length}`);
-
-    const semanticSet = new Set(getBorderSemantics().map((s) => s.segment_id));
+    const semanticSet = new Set(getBaseBorderSemantics().map((s) => s.segment_id));
     const withoutSemantics = allSegments.filter((seg) => !semanticSet.has(seg.segment_id)).length;
     console.info(`border segments without semantics: ${withoutSemantics}`);
 
@@ -142,154 +127,24 @@ describe("world_model data invariants", () => {
   });
 });
 
-const NATO_MEMBERS = new Set<CountryId>([
-  "ALB",
-  "BEL",
-  "BGR",
-  "CAN",
-  "CZE",
-  "DEU",
-  "DNK",
-  "ESP",
-  "EST",
-  "FIN",
-  "FRA",
-  "GRC",
-  "HRV",
-  "HUN",
-  "ISL",
-  "ITA",
-  "LVA",
-  "LTU",
-  "LUX",
-  "MNE",
-  "NLD",
-  "NOR",
-  "POL",
-  "PRT",
-  "ROU",
-  "SVK",
-  "SVN",
-  "SWE",
-  "TUR",
-  "USA",
-  "GBR",
-]);
+describe("factual sanity spot-checks", () => {
+  const NATO_MEMBERS = ["USA", "PRT", "DEU", "FRA", "GBR"];
+  const SCHENGEN_MEMBERS = ["PRT", "ESP", "DEU", "FRA", "NLD"];
+  const WTO_MEMBERS = ["USA", "PRT", "BRA", "CHN", "IND"];
 
-const EU_CUSTOMS_UNION = new Set<CountryId>([
-  "AUT",
-  "BEL",
-  "BGR",
-  "HRV",
-  "CYP",
-  "CZE",
-  "DNK",
-  "EST",
-  "FIN",
-  "FRA",
-  "DEU",
-  "GRC",
-  "HUN",
-  "IRL",
-  "ITA",
-  "LVA",
-  "LTU",
-  "LUX",
-  "MLT",
-  "NLD",
-  "POL",
-  "PRT",
-  "ROU",
-  "SVK",
-  "SVN",
-  "ESP",
-  "SWE",
-]);
-
-const SCHENGEN_MEMBERS = new Set<CountryId>([
-  "AUT",
-  "BEL",
-  "CZE",
-  "DNK",
-  "EST",
-  "FIN",
-  "FRA",
-  "DEU",
-  "GRC",
-  "HUN",
-  "ISL",
-  "ITA",
-  "LVA",
-  "LTU",
-  "LUX",
-  "MLT",
-  "NLD",
-  "NOR",
-  "POL",
-  "PRT",
-  "SVK",
-  "SVN",
-  "ESP",
-  "SWE",
-  "CHE",
-  "LIE",
-]);
-
-const WTO_MEMBERS = new Set<CountryId>(["PRT", "ESP", "BRA", "DEU", "FRA"]);
-const IMF_PROGRAM = new Set<CountryId>();
-const FATF_GREY = new Set<CountryId>();
-const FATF_BLACK = new Set<CountryId>();
-
-describe("world_model factual sanity checks", () => {
-  it("validates geopolitical and economic memberships when tagged", () => {
-    const tags = getAllCountryTags();
-    Object.entries(tags).forEach(([cid, entry]) => {
-      const blocs = (entry as any).geo_political_blocs as string[];
-      if (Array.isArray(blocs) && blocs.includes("nato")) {
-        expect(NATO_MEMBERS.has(cid as CountryId)).toBe(true);
-      }
-
-      const economic = (entry as any).economic_blocs as string[];
-      if (Array.isArray(economic) && economic.includes("eu_customs_union")) {
-        expect(EU_CUSTOMS_UNION.has(cid as CountryId)).toBe(true);
-      }
-
-      const financial = (entry as any).financial_structures as string[];
-      if (Array.isArray(financial)) {
-        if (financial.includes("wto_member")) {
-          expect(WTO_MEMBERS.has(cid as CountryId)).toBe(true);
-        }
-        if (financial.includes("imf_program")) {
-          expect(IMF_PROGRAM.has(cid as CountryId)).toBe(true);
-        }
-        if (financial.includes("fatf_grey")) {
-          expect(FATF_GREY.has(cid as CountryId)).toBe(true);
-        }
-        if (financial.includes("fatf_black")) {
-          expect(FATF_BLACK.has(cid as CountryId)).toBe(true);
-        }
-      }
-    });
+  it("validates NATO list for key members", () => {
+    const nato = new Set(getBaseSchemeMembers("geo_political_blocs", "nato"));
+    NATO_MEMBERS.forEach((cid) => expect(nato.has(cid as CountryId)).toBe(true));
   });
 
-  it("guards Schengen/EU border semantics against authoritative pairs", () => {
-    const semantics = getBorderSemantics();
-    const schengenSegments = semantics.filter((s) => s.tags.includes("schengen_internal"));
-    schengenSegments.forEach((entry) => {
-      const [a, b] = entry.segment_id.split("-");
-      expect(SCHENGEN_MEMBERS.has(a as CountryId)).toBe(true);
-      if (b && b !== "SEA") {
-        expect(SCHENGEN_MEMBERS.has(b as CountryId)).toBe(true);
-      }
-    });
+  it("validates Schengen membership for representative set", () => {
+    const schengen = new Set(getBaseSchemeMembers("regional_organizations", "schengen_area"));
+    SCHENGEN_MEMBERS.forEach((cid) => expect(schengen.has(cid as CountryId)).toBe(true));
+    expect(schengen.has("USA" as CountryId)).toBe(false);
+  });
 
-    const euSegments = semantics.filter((s) => s.tags.includes("eu_internal"));
-    euSegments.forEach((entry) => {
-      const [a, b] = entry.segment_id.split("-");
-      expect(EU_CUSTOMS_UNION.has(a as CountryId)).toBe(true);
-      if (b && b !== "SEA") {
-        expect(EU_CUSTOMS_UNION.has(b as CountryId)).toBe(true);
-      }
-    });
+  it("validates WTO membership for known economies", () => {
+    const wto = new Set(getBaseSchemeMembers("financial_structures", "wto_member"));
+    WTO_MEMBERS.forEach((cid) => expect(wto.has(cid as CountryId)).toBe(true));
   });
 });

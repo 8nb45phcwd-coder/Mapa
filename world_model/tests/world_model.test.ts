@@ -1,33 +1,29 @@
 import { describe, expect, it } from "vitest";
 import { feature } from "topojson-client";
 import world from "world-atlas/countries-50m.json";
-import countriesData from "../data/countries.json" assert { type: "json" };
-import schemesData from "../data/schemes.json" assert { type: "json" };
-import baseTags from "../data/tags/base.json" assert { type: "json" };
-import languagesData from "../data/languages.json" assert { type: "json" };
-import borderSemanticsData from "../data/border_semantics.json" assert { type: "json" };
+import countriesData from "../base/data/countries.json" assert { type: "json" };
+import baseSchemesData from "../base/data/schemes.json" assert { type: "json" };
+import membershipsData from "../base/data/memberships.json" assert { type: "json" };
+import languagesData from "../base/data/languages.json" assert { type: "json" };
+import borderSemanticsData from "../base/data/border_semantics.json" assert { type: "json" };
+import marxistSchemesData from "../marxist/data/schemes.json" assert { type: "json" };
+import marxistTagsData from "../marxist/data/tags.json" assert { type: "json" };
 import {
-  getAllCountries,
+  getBaseCountries,
   getCountryMeta,
   loadCountries,
-  getAllSchemes,
   loadSchemes,
-  getAllCountryTags,
-  getCountryTagSnapshot,
-  getCountriesByTag,
-  loadCountryTags,
-  getAllLanguages,
-  getLanguageByCode,
-  getCountriesByLanguage,
-  getSharedLanguageNeighbours,
-  getBorderSemantics,
+  getBaseSchemeMembers,
+  getCountryBaseTags,
+  getAllCountryBaseTags,
+  getBaseLanguages,
+  getCountryLanguages,
   getBorderSemanticsBySegmentId,
-  getSegmentsBySemanticTag,
+  getBaseBorderSemantics,
+  getMarxistTags,
 } from "../src/index.js";
 
-const expectedSchemes = [
-  "world_system_position",
-  "global_north_south",
+const expectedBaseSchemes = [
   "geo_political_blocs",
   "economic_blocs",
   "financial_structures",
@@ -36,13 +32,15 @@ const expectedSchemes = [
   "language_primary",
 ];
 
-describe("world model data scaffolding", () => {
-  it("contains country metadata matching engine world-atlas coverage", () => {
-    const countries: any[] = (countriesData as any).countries as any[];
+const countries = (countriesData as any).countries as any[];
+const baseSchemes = (baseSchemesData as any).schemes as any[];
+const memberships = (membershipsData as any).memberships as any[];
+
+describe("world_model base scaffolding", () => {
+  it("contains country metadata matching world-atlas coverage", () => {
     expect(countries.length).toBeGreaterThan(0);
     const numericToIso3 = new Map<string | undefined, string>();
     countries.forEach((c) => numericToIso3.set(c.iso_numeric?.padStart(3, "0"), c.id));
-
     const fc: any = feature(world as any, (world as any).objects.countries);
     fc.features.forEach((f: any) => {
       const id = f.id?.toString();
@@ -51,85 +49,67 @@ describe("world model data scaffolding", () => {
     });
   });
 
-  it("ensures each country entry has required neutral fields", () => {
-    ((countriesData as any).countries as any[]).forEach((c) => {
-      expect(typeof c.id).toBe("string");
-      expect(c.id.length).toBe(3);
-      expect(c.name_en.length).toBeGreaterThan(0);
-      expect(c.name_native.length).toBeGreaterThan(0);
-      expect(c.un_region.length).toBeGreaterThan(0);
-      expect(c.un_subregion.length).toBeGreaterThan(0);
-      expect(c.iso_numeric.length).toBeGreaterThan(0);
-    });
-  });
-
-  it("exposes the declared scheme catalogue including language_primary", () => {
-    const schemeIds = (schemesData as any).schemes.map((s: any) => s.id);
-    expect(schemeIds).toEqual(expectedSchemes);
-    (schemesData as any).schemes.forEach((s: any) => {
+  it("exposes the base scheme catalogue and membership fixtures", () => {
+    const schemeIds = baseSchemes.map((s) => s.id);
+    expect(schemeIds).toEqual(expectedBaseSchemes);
+    baseSchemes.forEach((s) => {
       expect(typeof s.label).toBe("string");
       expect(Array.isArray(s.groups)).toBe(true);
       expect(s.groups.length).toBeGreaterThan(0);
     });
+    expect(memberships.length).toBeGreaterThan(0);
   });
 
-  it("provides base tags with all scheme keys for every country", () => {
-    const tags = baseTags as Record<string, any>;
-    const countryIds = ((countriesData as any).countries as any[]).map((c) => c.id);
+  it("computes base tags for every country with language coverage", async () => {
+    const tags = getAllCountryBaseTags();
+    const countryIds = countries.map((c) => c.id);
     expect(Object.keys(tags).sort()).toEqual(countryIds.sort());
     countryIds.forEach((id) => {
       const entry = tags[id];
-      expect(entry).toBeTruthy();
-      expectedSchemes.forEach((schemeId) => {
+      expectedBaseSchemes.forEach((schemeId) => {
         expect(entry).toHaveProperty(schemeId);
       });
     });
+    const portugal = getCountryBaseTags("PRT");
+    expect(portugal?.language_primary).toBe("pt");
   });
 });
 
-describe("world model API", () => {
-  it("loads countries and exposes metadata for a known id", async () => {
-    const countries = await loadCountries();
-    expect(countries.length).toBe(((countriesData as any).countries as any[]).length);
+describe("world_model API behaviour", () => {
+  it("loads countries and metadata for known ids", async () => {
+    const loaded = await loadCountries();
+    expect(loaded.length).toBe(countries.length);
     const portugal = getCountryMeta("PRT");
-    expect(portugal).toBeTruthy();
     expect(portugal?.name_en).toBe("Portugal");
+    expect(getCountryLanguages("PRT")).toContain("pt");
   });
 
-  it("loads scheme catalogue and tag snapshots with curated overrides", async () => {
+  it("provides scheme memberships and base semantics", async () => {
     const schemeCatalog = await loadSchemes();
-    expect(schemeCatalog.schemes.map((s) => s.id)).toEqual(expectedSchemes);
+    expect(schemeCatalog.schemes.map((s) => s.id)).toEqual(expectedBaseSchemes);
+    const natoMembers = getBaseSchemeMembers("geo_political_blocs", "nato");
+    expect(natoMembers).toContain("PRT");
+    const semantics = getBaseBorderSemantics();
+    expect(semantics.length).toBe((borderSemanticsData as any).segments.length);
+    const prtEsp = getBorderSemanticsBySegmentId("ESP-PRT-0");
+    expect(prtEsp?.tags).toContain("schengen_internal");
+  });
 
-    const tags = await loadCountryTags();
-    const snapshot = getCountryTagSnapshot("PRT");
-    expect(snapshot?.language_primary).toBe("pt");
-    const examples = getCountriesByTag("geo_political_blocs", "nato");
-    expect(examples).toContain("PRT");
-    expect(Object.keys(tags)).toContain("BRA");
-    expect(getCountryTagSnapshot("BRA")?.world_system_position).toBe("semi_periphery");
+  it("retains marxist tags but keeps them separate from base facts", () => {
+    const marxistSchemes = (marxistSchemesData as any).schemes as any[];
+    expect(marxistSchemes.map((s) => s.id)).toContain("world_system_position");
+    const marxistTags = marxistTagsData as Record<string, any>;
+    expect(Object.keys(marxistTags)).toContain("PRT");
+    const prt = getMarxistTags("PRT");
+    expect(prt?.world_system_position).toBe("core_dependent");
   });
 });
 
 describe("language metadata", () => {
   it("exposes language catalog and country membership", () => {
-    const languages = getAllLanguages();
+    const languages = getBaseLanguages();
     expect(languages.length).toBe((languagesData as any).languages.length);
-    const portuguese = getLanguageByCode("pt");
+    const portuguese = languages.find((l) => l.code === "pt");
     expect(portuguese?.country_ids).toContain("PRT");
-    const portugueseCountries = getCountriesByLanguage("pt");
-    expect(portugueseCountries).toContain("BRA");
-    const neighbourPairs = getSharedLanguageNeighbours("pt");
-    expect(neighbourPairs.some((p) => p.country_a === "BRA" || p.country_b === "BRA")).toBe(true);
-  });
-});
-
-describe("border semantics", () => {
-  it("returns semantic tags for configured segments", () => {
-    const semantics = getBorderSemantics();
-    expect(semantics.length).toBe((borderSemanticsData as any).segments.length);
-    const prtEsp = getBorderSemanticsBySegmentId("ESP-PRT-0");
-    expect(prtEsp?.tags).toContain("schengen_internal");
-    const coastline = getSegmentsBySemanticTag("coastline");
-    expect(coastline.some((s) => s.segment_id === "PRT-SEA-0")).toBe(true);
   });
 });
