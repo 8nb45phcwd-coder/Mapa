@@ -234,23 +234,13 @@ export interface LodGeometrySet {
   topojson: any;
 }
 
-export type InfrastructureSegmentType =
-  | "pipeline_oil"
-  | "pipeline_gas"
-  | "power_interconnector"
-  | "rail_corridor_intl"
-  | "subsea_cable";
+export type InfrastructureSegmentType = "pipeline_gas_strategic" | "pipeline_oil_strategic";
 
 export type InfrastructureNodeType =
-  | "port_container"
-  | "port_bulk"
-  | "port_oil"
-  | "port_lng"
-  | "mine_critical"
-  | "refinery"
-  | "power_plant_strategic"
-  | "cable_landing"
-  | "cargo_airport";
+  | "port_container_major"
+  | "oil_gas_platform_offshore_major"
+  | "mine_critical_major"
+  | "airport_hub_major";
 
 export interface InfrastructureLine {
   id: string;
@@ -260,6 +250,8 @@ export interface InfrastructureLine {
   type?: InfrastructureSegmentType;
   name?: string;
   countries?: CountryID[];
+  owner_raw?: string;
+  operator_raw?: string;
 }
 
 export interface ClippedInfrastructureLine extends InfrastructureLine {
@@ -277,6 +269,8 @@ export interface TransnationalInfrastructureLine {
   kind?: string;
   type?: InfrastructureSegmentType;
   name?: string;
+  owner_raw?: string;
+  operator_raw?: string;
 }
 
 export interface InfrastructureNode {
@@ -289,6 +283,8 @@ export interface InfrastructureNode {
   offshore?: boolean;
   offshore_distance_km?: number;
   properties?: Record<string, any>;
+  owner_raw?: string;
+  operator_raw?: string;
 }
 
 // Layers must resolve data by IDs only (CountryID/RegionID/etc.), never by absolute screen coordinates.

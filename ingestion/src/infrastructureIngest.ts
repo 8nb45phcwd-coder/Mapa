@@ -1,6 +1,9 @@
 import { feature } from "topojson-client";
 import { geoContains, geoDistance } from "d3-geo";
 import proj4 from "proj4";
+import { readFileSync } from "fs";
+import { fileURLToPath } from "url";
+import { resolve } from "path";
 import type {
   ClippedInfrastructureLine,
   Country,
@@ -27,6 +30,7 @@ export interface InfraSourceConfig {
   reliability?: InfraReliability;
   preprocess?: (data: any) => any;
   notes?: string;
+  fixture?: string;
 }
 
 export interface InfraIngestOptions {
@@ -37,6 +41,8 @@ export interface InfraIngestOptions {
   classificationDecoder?: (source: any, ref: string) => any;
   coastalToleranceKm?: number;
   countryIndex?: Map<CountryID, CountryGeometry>;
+  useFixturesOnly?: boolean;
+  fixtureOverrideDir?: string;
 }
 
 export interface IngestedInfrastructure {
@@ -49,100 +55,58 @@ export interface IngestedInfrastructure {
 // or supply pre-fetched `sourceData` during tests for determinism.
 export const defaultInfraSources: InfraSourceConfig[] = [
   {
-    infraType: "pipeline_gas",
-    sourceId: "global_pipelines_gas",
+    infraType: "pipeline_gas_strategic",
+    sourceId: "global_pipelines_gas_strategic",
     url: "https://datasets.globalenergymonitor.org/pipelines/latest/gas-pipelines.geojson",
     adapter: "geojson_line",
     reliability: "authoritative",
-    notes: "GEM gas pipelines",
+    notes: "GEM gas trunklines",
+    fixture: "strategic-lines.geojson",
   },
   {
-    infraType: "pipeline_oil",
-    sourceId: "global_pipelines_oil",
+    infraType: "pipeline_oil_strategic",
+    sourceId: "global_pipelines_oil_strategic",
     url: "https://datasets.globalenergymonitor.org/pipelines/latest/oil-pipelines.geojson",
     adapter: "geojson_line",
     reliability: "authoritative",
-    notes: "GEM oil pipelines",
+    notes: "GEM oil trunklines",
+    fixture: "strategic-lines.geojson",
   },
   {
-    infraType: "power_interconnector",
-    sourceId: "entso_e_interconnectors",
-    url: "https://raw.githubusercontent.com/openinframap/homepage/master/data/power-interconnectors.geojson",
-    adapter: "geojson_line",
-    reliability: "partial",
-    notes: "ENTSO-E/OSM derived interconnectors",
-  },
-  {
-    infraType: "subsea_cable",
-    sourceId: "global_subsea_cables",
-    url: "https://www.submarinecablemap.com/api/v3/cable",
-    adapter: "geojson_line",
-    reliability: "partial",
-    notes: "TeleGeography public cable GeoJSON",
-  },
-  {
-    infraType: "cable_landing",
-    sourceId: "global_cable_landings",
-    url: "https://www.submarinecablemap.com/api/v3/landing-point",
-    adapter: "geojson_point",
-    reliability: "partial",
-    notes: "TeleGeography landing stations",
-  },
-  {
-    infraType: "port_container",
-    sourceId: "global_ports",
+    infraType: "port_container_major",
+    sourceId: "global_ports_container_major",
     url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
     adapter: "geojson_point",
     reliability: "authoritative",
-    notes: "World Port Index (with OSM maritime tags as fallback)",
+    notes: "World Port Index (container capacity rankings)",
+    fixture: "strategic-nodes.geojson",
   },
   {
-    infraType: "port_bulk",
-    sourceId: "global_ports_bulk",
-    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
-    adapter: "geojson_point",
-    reliability: "authoritative",
-    notes: "World Port Index bulk terminals",
-  },
-  {
-    infraType: "port_oil",
-    sourceId: "global_ports_oil",
-    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
-    adapter: "geojson_point",
-    reliability: "authoritative",
-    notes: "World Port Index oil terminals",
-  },
-  {
-    infraType: "port_lng",
-    sourceId: "global_ports_lng",
-    url: "https://msi.nga.mil/api/publications/world-port-index.geojson",
-    adapter: "geojson_point",
-    reliability: "authoritative",
-    notes: "World Port Index LNG terminals",
-  },
-  {
-    infraType: "power_plant_strategic",
-    sourceId: "global_power_plants",
-    url: "https://storage.googleapis.com/global-power-plant-database/global_power_plant_database.geojson",
+    infraType: "oil_gas_platform_offshore_major",
+    sourceId: "global_offshore_platforms_major",
+    url: "https://example.com/offshore-platforms.geojson",
     adapter: "geojson_point",
     reliability: "partial",
-    notes: "Global Power Plant Database",
+    notes: "Offshore platforms (placeholder source)",
+    fixture: "strategic-nodes.geojson",
   },
   {
-    infraType: "mine_critical",
-    sourceId: "global_mines",
+    infraType: "mine_critical_major",
+    sourceId: "global_mines_critical_major",
     url: "https://datasets.globalenergymonitor.org/mines/latest/mines.geojson",
     adapter: "geojson_point",
     reliability: "partial",
-    notes: "GEM mines / USGS",
+    notes: "GEM mines filtered to critical minerals",
+    fixture: "strategic-nodes.geojson",
   },
   {
-    infraType: "cargo_airport",
-    sourceId: "global_airports",
+    infraType: "airport_hub_major",
+    sourceId: "global_airports_hub_major",
     url: "https://ourairports.com/data/airports.geojson",
     adapter: "geojson_point",
     reliability: "approximate",
-    notes: "OurAirports cargo hubs / OSM aeroway",
+    notes: "Major hub airports",
+    fixture: "strategic-nodes.geojson",
   },
 ];
 
@@ -163,11 +127,13 @@ interface CountryAssignment {
 interface RawFeatureSegment {
   kind: "segment";
   segment: InfrastructureLine;
+  properties?: Record<string, any>;
 }
 
 interface RawFeatureNode {
   kind: "node";
   node: InfrastructureNode;
+  properties?: Record<string, any>;
 }
 
 type RawFeature = RawFeatureSegment | RawFeatureNode;
@@ -243,14 +209,15 @@ function adaptLineFeatures(data: any, config: InfraSourceConfig): RawFeature[] {
   const results: RawFeature[] = [];
   features.forEach((f, idx) => {
     if (!f.geometry || (f.geometry.type !== "LineString" && f.geometry.type !== "MultiLineString")) return;
+    const properties = f.properties || {};
     const lines: [number, number][][] =
       f.geometry.type === "LineString" ? [f.geometry.coordinates] : f.geometry.coordinates;
     lines.forEach((coords, lineIdx) => {
       const ring = (coords as [number, number][]).map((pt) => reprojectToWGS84(pt, f.properties?.crs || crs));
       ring.forEach(ensureWgs84Coord);
       const id = (f.id ?? f.properties?.id ?? `${config.sourceId}-${idx}-${lineIdx}`).toString();
-      const name = (f.properties?.name ?? f.properties?.Name ?? config.sourceId).toString();
-      const inferredType = (f.properties?.infraType || f.properties?.type || config.infraType) as
+      const name = (properties?.name ?? properties?.Name ?? config.sourceId).toString();
+      const inferredType = (properties?.infraType || properties?.type || config.infraType) as
         | InfrastructureSegmentType
         | InfrastructureNodeType;
       results.push({
@@ -261,7 +228,10 @@ function adaptLineFeatures(data: any, config: InfraSourceConfig): RawFeature[] {
           geometry_geo: ring,
           type: inferredType as InfrastructureSegmentType,
           name,
+          owner_raw: properties?.owner ?? properties?.Owner,
+          operator_raw: properties?.operator ?? properties?.Operator,
         },
+        properties,
       });
     });
   });
@@ -274,11 +244,12 @@ function adaptPointFeatures(data: any, config: InfraSourceConfig): RawFeature[] 
   const results: RawFeature[] = [];
   features.forEach((f, idx) => {
     if (!f.geometry || f.geometry.type !== "Point") return;
-    const coords = reprojectToWGS84(f.geometry.coordinates as [number, number], f.properties?.crs || crs);
+    const properties = f.properties || {};
+    const coords = reprojectToWGS84(f.geometry.coordinates as [number, number], properties?.crs || crs);
     ensureWgs84Coord([coords[0], coords[1]]);
     const id = (f.id ?? f.properties?.id ?? `${config.sourceId}-${idx}`).toString();
-    const name = (f.properties?.name ?? f.properties?.Name ?? config.sourceId).toString();
-    const inferredType = (f.properties?.infraType || f.properties?.type || config.infraType) as InfrastructureNodeType;
+    const name = (properties?.name ?? properties?.Name ?? config.sourceId).toString();
+    const inferredType = (properties?.infraType || properties?.type || config.infraType) as InfrastructureNodeType;
     results.push({
       kind: "node",
       node: {
@@ -288,17 +259,122 @@ function adaptPointFeatures(data: any, config: InfraSourceConfig): RawFeature[] 
         name,
         lon: coords[0],
         lat: coords[1],
-        properties: f.properties,
+        properties,
+        owner_raw: properties?.owner ?? properties?.Owner,
+        operator_raw: properties?.operator ?? properties?.Operator,
       },
+      properties,
     });
   });
   return results;
 }
 
-const adapterRegistry: Record<string, (data: any, config: InfraSourceConfig) => RawFeature[]> = {
+export const adapterRegistry: Record<string, (data: any, config: InfraSourceConfig) => RawFeature[]> = {
   geojson_line: adaptLineFeatures,
   geojson_point: adaptPointFeatures,
 };
+
+export const DEFAULT_FIXTURE_DIR = new URL("../fixtures/", import.meta.url);
+
+export function resolveFixturePath(config: InfraSourceConfig, options: InfraIngestOptions): string {
+  const base = options.fixtureOverrideDir
+    ? resolve(options.fixtureOverrideDir)
+    : fileURLToPath(DEFAULT_FIXTURE_DIR);
+  const file = config.fixture ?? `${config.sourceId}.geojson`;
+  return resolve(base, file);
+}
+
+export function loadFixtureData(config: InfraSourceConfig, options: InfraIngestOptions): any {
+  const path = resolveFixturePath(config, options);
+  const raw = readFileSync(path, "utf-8");
+  return JSON.parse(raw);
+}
+
+function pipelineCapacityScore(props: Record<string, any>): number {
+  const capacityFields = ["capacity_mmcfd", "capacity_bcm_per_year", "throughput_bpd", "capacity"];
+  for (const key of capacityFields) {
+    if (props[key]) {
+      const val = Number(props[key]);
+      if (!Number.isNaN(val)) return val;
+    }
+  }
+  return 0;
+}
+
+function isStrategicPipeline(raw: RawFeatureSegment): boolean {
+  const props = raw.properties || {};
+  if (props.strategic === true || props.tier === "strategic" || props.category === "trunk") return true;
+  if (props.status && typeof props.status === "string" && props.status.toLowerCase().includes("trunk")) return true;
+  const capacity = pipelineCapacityScore(props);
+  if (capacity >= 500) return true;
+  return false;
+}
+
+const criticalMinerals = [
+  "lithium",
+  "cobalt",
+  "nickel",
+  "copper",
+  "graphite",
+  "rare earth",
+  "rare-earth",
+  "manganese",
+];
+
+function isCriticalMineralMine(raw: RawFeatureNode): boolean {
+  const props = raw.properties || {};
+  if (props.strategic === true || props.tier === "strategic") return true;
+  const commodity = (props.commodity || props.commodities || "").toString().toLowerCase();
+  if (criticalMinerals.some((c) => commodity.includes(c))) return true;
+  const output = Number(props.output_tonnes || props.production_tonnes || props.capacity_tonnes);
+  if (!Number.isNaN(output) && output >= 100000) return true;
+  return false;
+}
+
+function isMajorPort(raw: RawFeatureNode): boolean {
+  const props = raw.properties || {};
+  if (props.strategic === true || props.tier === "strategic" || props.rank === 1) return true;
+  const teu = Number(props.teu || props.throughput_teu || props.annual_teu);
+  if (!Number.isNaN(teu) && teu >= 2000000) return true;
+  return false;
+}
+
+function isMajorAirport(raw: RawFeatureNode): boolean {
+  const props = raw.properties || {};
+  if (props.strategic === true || props.tier === "strategic" || props.category === "hub") return true;
+  const pax = Number(props.passengers || props.passengers_millions);
+  const cargo = Number(props.cargo_tonnes || props.cargo_tons || props.cargo_mt);
+  if (!Number.isNaN(pax) && pax >= 10000000) return true;
+  if (!Number.isNaN(cargo) && cargo >= 500000) return true;
+  return false;
+}
+
+function isMajorOffshorePlatform(raw: RawFeatureNode): boolean {
+  const props = raw.properties || {};
+  if (props.strategic === true || props.tier === "strategic") return true;
+  if (props.offshore === true) return true;
+  const production = Number(props.production_bpd || props.production_boe || props.capacity_bpd);
+  if (!Number.isNaN(production) && production >= 100000) return true;
+  return false;
+}
+
+export function filterStrategicSubset(rawFeatures: RawFeature[], config: InfraSourceConfig): RawFeature[] {
+  switch (config.infraType) {
+    case "pipeline_gas_strategic":
+    case "pipeline_oil_strategic":
+      return rawFeatures.filter((f): f is RawFeatureSegment => f.kind === "segment").filter(isStrategicPipeline);
+    case "port_container_major":
+      return rawFeatures.filter((f): f is RawFeatureNode => f.kind === "node").filter(isMajorPort);
+    case "airport_hub_major":
+      return rawFeatures.filter((f): f is RawFeatureNode => f.kind === "node").filter(isMajorAirport);
+    case "mine_critical_major":
+      return rawFeatures.filter((f): f is RawFeatureNode => f.kind === "node").filter(isCriticalMineralMine);
+    case "oil_gas_platform_offshore_major":
+      return rawFeatures.filter((f): f is RawFeatureNode => f.kind === "node").filter(isMajorOffshorePlatform);
+    default:
+      return rawFeatures;
+  }
+}
 
 function segmentDistanceKm(point: [number, number], a: [number, number], b: [number, number]): number {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -464,6 +540,15 @@ function fetchDataset(config: InfraSourceConfig, options: InfraIngestOptions): P
   if (options.sourceData && options.sourceData[config.sourceId]) {
     return Promise.resolve(options.sourceData[config.sourceId]);
   }
+  const preferFixtures = options.useFixturesOnly ?? true;
+  if (preferFixtures) {
+    try {
+      return Promise.resolve(loadFixtureData(config, options));
+    } catch (err) {
+      if (options.useFixturesOnly) throw err;
+      // fall through to network fetch
+    }
+  }
   const fetcher = options.fetcher ?? fetch;
   return fetcher(config.url).then((r: any) => {
     if (!r.ok) throw new Error(`Failed to fetch ${config.url}: ${r.status}`);
@@ -495,7 +580,7 @@ export async function ingestInfrastructure(
     if (!adapter) throw new Error(`Adapter ${config.adapter} not registered`);
     const data = await fetchDataset(config, options);
     const prepared = config.preprocess ? config.preprocess(data) : data;
-    const rawFeatures = adapter(prepared, config);
+    const rawFeatures = filterStrategicSubset(adapter(prepared, config), config);
     rawFeatures.forEach((raw) => {
       if (raw.kind === "node") {
         const assignment = findCountryForPoint([raw.node.lon, raw.node.lat], countryIndex, coastalTolerance);
@@ -519,6 +604,8 @@ export async function ingestInfrastructure(
             type: raw.segment.type,
             name: raw.segment.name,
             kind: raw.segment.kind,
+            owner_raw: raw.segment.owner_raw,
+            operator_raw: raw.segment.operator_raw,
           });
         }
       }

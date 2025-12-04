@@ -59,16 +59,12 @@ const GROUP_COLORS = [
 ];
 
 const INFRA_COLORS: Record<string, string> = {
-  pipeline_gas: "#22c55e",
-  pipeline_oil: "#f97316",
-  power_interconnector: "#38bdf8",
-  subsea_cable: "#e0f2fe",
-  port_container: "#c084fc",
-  port_bulk: "#a3e635",
-  port_oil: "#fb7185",
-  port_lng: "#fde047",
-  mine_critical: "#f472b6",
-  power_plant_strategic: "#fbbf24",
+  pipeline_gas_strategic: "#22c55e",
+  pipeline_oil_strategic: "#f97316",
+  port_container_major: "#c084fc",
+  oil_gas_platform_offshore_major: "#fde047",
+  mine_critical_major: "#f472b6",
+  airport_hub_major: "#38bdf8",
 };
 
 const LAYERS_DEFAULT = {
@@ -484,7 +480,7 @@ const App: React.FC = () => {
             if (idx === 0) path.moveTo(pt[0], pt[1]);
             else path.lineTo(pt[0], pt[1]);
           });
-          ctx.strokeStyle = INFRA_COLORS[line.type ?? line.kind ?? "pipeline_gas"] ?? "#22c55e";
+          ctx.strokeStyle = INFRA_COLORS[line.type ?? line.kind ?? "pipeline_gas_strategic"] ?? "#22c55e";
           ctx.lineWidth = 1.4;
           ctx.stroke(path);
         });
@@ -505,41 +501,31 @@ const App: React.FC = () => {
           if (idx === 0) path.moveTo(pt[0], pt[1]);
           else path.lineTo(pt[0], pt[1]);
         });
-        ctx.strokeStyle = INFRA_COLORS[line.type ?? line.kind ?? "pipeline_gas"] ?? "#22c55e";
+        ctx.strokeStyle = INFRA_COLORS[line.type ?? line.kind ?? "pipeline_gas_strategic"] ?? "#22c55e";
         ctx.lineWidth = 1.2;
         ctx.stroke(path);
       };
 
       if (layers.pipelines) {
         infra.internalSegments
-          .filter((seg) => seg.type === "pipeline_gas" || seg.type === "pipeline_oil")
+          .filter((seg) => seg.type === "pipeline_gas_strategic" || seg.type === "pipeline_oil_strategic")
           .forEach(drawInternal);
         infra.transnationalSegments
-          .filter((seg) => seg.type === "pipeline_gas" || seg.type === "pipeline_oil")
-          .forEach(drawTransnational);
-      }
-      if (layers.cables) {
-        infra.internalSegments.filter((seg) => seg.type === "subsea_cable").forEach(drawInternal);
-        infra.transnationalSegments.filter((seg) => seg.type === "subsea_cable").forEach(drawTransnational);
-      }
-      if (layers.power) {
-        infra.internalSegments.filter((seg) => seg.type === "power_interconnector").forEach(drawInternal);
-        infra.transnationalSegments
-          .filter((seg) => seg.type === "power_interconnector")
+          .filter((seg) => seg.type === "pipeline_gas_strategic" || seg.type === "pipeline_oil_strategic")
           .forEach(drawTransnational);
       }
       if (layers.ports || layers.mines || layers.power || layers.cables) {
         const nodeTypes = new Set<string>();
         if (layers.ports) {
-          ["port_container", "port_bulk", "port_oil", "port_lng"].forEach((t) => nodeTypes.add(t));
+          ["port_container_major", "oil_gas_platform_offshore_major"].forEach((t) => nodeTypes.add(t));
         }
-        if (layers.mines) nodeTypes.add("mine_critical");
-        if (layers.power) nodeTypes.add("power_plant_strategic");
+        if (layers.mines) nodeTypes.add("mine_critical_major");
+        if (layers.power) nodeTypes.add("airport_hub_major");
         infra.nodes
           .filter((n) => (n.type ? nodeTypes.has(n.type) : false))
           .forEach((node) => {
             const projected = applyCameraToPoint(projection([node.lon, node.lat]), camera);
-            ctx.fillStyle = INFRA_COLORS[node.type ?? "port_container"] ?? "#c084fc";
+            ctx.fillStyle = INFRA_COLORS[node.type ?? "port_container_major"] ?? "#c084fc";
             ctx.beginPath();
             ctx.arc(projected[0], projected[1], 3, 0, Math.PI * 2);
             ctx.fill();

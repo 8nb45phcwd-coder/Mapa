@@ -1,0 +1,64 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Rotterdam Container Hub",
+        "infraType": "port_container_major",
+        "teu": 14500000,
+        "rank": 1,
+        "owner": "Port of Rotterdam",
+        "operator": "Port of Rotterdam"
+      },
+      "geometry": {"type": "Point", "coordinates": [4.889, 51.95]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Singapore Container Anchor",
+        "infraType": "port_container_major",
+        "teu": 37000000,
+        "rank": 1,
+        "owner": "Maritime Singapore",
+        "operator": "PSA"
+      },
+      "geometry": {"type": "Point", "coordinates": [103.7, 1.26]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Ekofisk Offshore Complex",
+        "infraType": "oil_gas_platform_offshore_major",
+        "production_bpd": 500000,
+        "offshore": true,
+        "owner": "ConocoPhillips",
+        "operator": "Equinor"
+      },
+      "geometry": {"type": "Point", "coordinates": [5.5, 59.0]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pilbara Lithium One",
+        "infraType": "mine_critical_major",
+        "commodity": "lithium",
+        "output_tonnes": 900000,
+        "owner": "Pilbara Minerals"
+      },
+      "geometry": {"type": "Point", "coordinates": [117.0, -22.3]}
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Frankfurt Cargo Hub",
+        "infraType": "airport_hub_major",
+        "passengers": 70000000,
+        "cargo_tonnes": 2000000,
+        "owner": "Fraport",
+        "operator": "Fraport"
+      },
+      "geometry": {"type": "Point", "coordinates": [8.5706, 50.0333]}
+    }
+  ]
+}
