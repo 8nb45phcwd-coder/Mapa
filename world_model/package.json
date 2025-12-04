@@ -7,9 +7,13 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "refresh": "node base/fetch/refresh.js"
+    "refresh": "node base/fetch/refresh.js",
+    "coverage": "tsx scripts/print-coverage.ts"
   },
   "dependencies": {
     "world-map-engine": "^1.0.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.1"
   }
 }

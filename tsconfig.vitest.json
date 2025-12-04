@@ -2,6 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "types": ["vitest/globals", "node"],
+    "jsx": "react-jsx",
+    "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "noEmit": true,
     "paths": {
       "world-map-engine": ["engine/src/index.ts"],
@@ -18,7 +20,8 @@
     "world_model/src/**/*",
     "engine/tests/**/*",
     "ingestion/tests/**/*",
-    "world_model/tests/**/*"
+    "world_model/tests/**/*",
+    "app/src/**/*"
   ],
   "exclude": ["**/dist", "node_modules"]
 }

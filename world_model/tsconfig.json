@@ -10,6 +10,7 @@
     "src/**/*",
     "base/**/*",
     "marxist/**/*",
+    "scripts/**/*",
     "base/data/**/*.json",
     "marxist/data/**/*.json"
   ],

@@ -31,3 +31,12 @@ This will fetch external membership lists where URLs are provided, fall back to 
 - integration with the engine’s border segment index.
 
 All data access is local and deterministic; no network is used during tests.
+
+## Coverage report
+Generate a snapshot of semantic coverage (languages, scheme tags, border semantics) using the local fixtures:
+
+```bash
+npm run world-model:coverage
+```
+
+This prints aggregate counts per scheme, language primary coverage, and border semantics examples without performing any live fetches.

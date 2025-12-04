@@ -198,6 +198,10 @@ const App: React.FC = () => {
   const [borderSemanticScheme, setBorderSemanticScheme] = useState<string>(
     () => getBaseBorderSemantics()[0]?.tags[0] ?? "schengen_internal"
   );
+  const allowLiveInfrastructure =
+    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_ALLOW_LIVE_INFRA === "true") ||
+    (typeof process !== "undefined" && process?.env?.VITE_ALLOW_LIVE_INFRA === "true");
+  const [useLiveInfrastructure, setUseLiveInfrastructure] = useState(false);
   const [infra, setInfra] = useState<IngestedInfrastructure | null>(null);
   const [infraStatus, setInfraStatus] = useState<string>("idle");
   const [lodLevel, setLodLevel] = useState<string>("medium");
@@ -344,10 +348,11 @@ const App: React.FC = () => {
         setBorderSemanticsMap(semantics);
 
         // Infrastructure
-        setInfraStatus("loading");
+        setInfraStatus(useLiveInfrastructure ? "loading_live" : "loading_fixtures");
         try {
           const infraRes = await loadAllInfrastructure(highTopo, countryList, {
             countryIndex: undefined,
+            useFixturesOnly: !useLiveInfrastructure,
           });
           if (!cancelled) {
             setInfra(infraRes);
@@ -364,7 +369,15 @@ const App: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [baseCountries, camera.zoom, ensureLodGeometry, rebuildShapes, viewport.height, viewport.width]);
+  }, [
+    baseCountries,
+    camera.zoom,
+    ensureLodGeometry,
+    rebuildShapes,
+    useLiveInfrastructure,
+    viewport.height,
+    viewport.width,
+  ]);
 
   useEffect(() => {
     if (!countries.length || !featureCollection) return;
@@ -705,6 +718,9 @@ const App: React.FC = () => {
           />
           Hybrid
         </label>
+        <div data-testid="layout-mode-label" className="status-row">
+          Mode: {layoutMode}
+        </div>
         {layoutMode === "hybrid" && (
           <label>
             Alpha: {hybridAlpha.toFixed(2)}
@@ -755,11 +771,34 @@ const App: React.FC = () => {
               onChange={() => setLayers((prev) => ({ ...prev, [key]: !prev[key as keyof typeof layers] }))}
             />
             {key}
+            <span
+              className="status-row"
+              data-testid={`layer-${key}-state`}
+              style={{ marginLeft: 8 }}
+            >
+              {value ? "on" : "off"}
+            </span>
           </label>
         ))}
 
         <div className="status-row">LOD: {lodLevel}</div>
-        <div className="status-row">Infra: {infraStatus}</div>
+        <div className="status-row">
+          Infra: {infraStatus} ({useLiveInfrastructure ? "live (opt-in)" : "fixtures/offline"})
+        </div>
+        {allowLiveInfrastructure ? (
+          <label className="layer-toggle">
+            <input
+              type="checkbox"
+              checked={useLiveInfrastructure}
+              onChange={(evt) => setUseLiveInfrastructure(evt.target.checked)}
+            />
+            Use live infrastructure data (default is offline fixtures; may be slow/non-deterministic)
+          </label>
+        ) : (
+          <p className="status-row">
+            Infrastructure uses fixture data by default for offline-deterministic runs.
+          </p>
+        )}
         {loading && <div className="status-row">Loading world data…</div>}
       </div>
 
