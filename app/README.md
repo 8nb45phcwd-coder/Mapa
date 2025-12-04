@@ -14,6 +14,12 @@ Other scripts:
 - `npm run build --workspace app` – production build
 - `npm run preview --workspace app` – preview a production build
 
+## GitHub Pages deployment
+
+- The viewer is published automatically to **GitHub Pages** from the `main` branch.
+- Deployment URL pattern: `https://<GITHUB_USERNAME>.github.io/Mapa/` (the repo folder name is used as the base path).
+- No local dev server is required to *use* the app—open the Pages URL above to interact with the fixture-backed viewer.
+
 ## Features
 
 - Zoom and pan camera controls with LOD-aware rendering

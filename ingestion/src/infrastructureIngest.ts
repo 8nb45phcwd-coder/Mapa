@@ -1,9 +1,6 @@
 import { feature } from "topojson-client";
 import { geoContains, geoDistance } from "d3-geo";
 import proj4 from "proj4";
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { resolve } from "path";
 import type {
   ClippedInfrastructureLine,
   Country,
@@ -276,18 +273,37 @@ export const adapterRegistry: Record<string, (data: any, config: InfraSourceConf
 
 export const DEFAULT_FIXTURE_DIR = new URL("../fixtures/", import.meta.url);
 
-export function resolveFixturePath(config: InfraSourceConfig, options: InfraIngestOptions): string {
-  const base = options.fixtureOverrideDir
-    ? resolve(options.fixtureOverrideDir)
-    : fileURLToPath(DEFAULT_FIXTURE_DIR);
+export async function loadFixtureData(
+  config: InfraSourceConfig,
+  options: InfraIngestOptions
+): Promise<any> {
   const file = config.fixture ?? `${config.sourceId}.geojson`;
-  return resolve(base, file);
-}
 
-export function loadFixtureData(config: InfraSourceConfig, options: InfraIngestOptions): any {
-  const path = resolveFixturePath(config, options);
-  const raw = readFileSync(path, "utf-8");
-  return JSON.parse(raw);
+  // Node.js branch: preserve existing filesystem-based fixture loading.
+  if (typeof window === "undefined") {
+    const [{ readFileSync }, { resolve }, { fileURLToPath }] = await Promise.all([
+      import("fs"),
+      import("path"),
+      import("url"),
+    ]);
+    const base = options.fixtureOverrideDir
+      ? resolve(options.fixtureOverrideDir)
+      : fileURLToPath(DEFAULT_FIXTURE_DIR);
+    const path = resolve(base, file);
+    const raw = readFileSync(path, "utf-8");
+    return JSON.parse(raw);
+  }
+
+  // Browser branch: fetch fixtures as static assets bundled by Vite.
+  const baseUrl = options.fixtureOverrideDir
+    ? new URL(options.fixtureOverrideDir, DEFAULT_FIXTURE_DIR)
+    : DEFAULT_FIXTURE_DIR;
+  const url = new URL(file, baseUrl);
+  const response = await fetch(url.toString());
+  if (!response.ok) {
+    throw new Error(`Failed to load fixture ${url.toString()}: ${response.status}`);
+  }
+  return response.json();
 }
 
 function pipelineCapacityScore(props: Record<string, any>): number {
@@ -536,14 +552,14 @@ function clipInternalLine(
   return clipped.clipped_segments.length === 0 ? null : clipped;
 }
 
-function fetchDataset(config: InfraSourceConfig, options: InfraIngestOptions): Promise<any> {
+async function fetchDataset(config: InfraSourceConfig, options: InfraIngestOptions): Promise<any> {
   if (options.sourceData && options.sourceData[config.sourceId]) {
     return Promise.resolve(options.sourceData[config.sourceId]);
   }
   const preferFixtures = options.useFixturesOnly ?? true;
   if (preferFixtures) {
     try {
-      return Promise.resolve(loadFixtureData(config, options));
+      return await loadFixtureData(config, options);
     } catch (err) {
       if (options.useFixturesOnly) throw err;
       // fall through to network fetch
