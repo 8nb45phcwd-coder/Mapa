@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 
+const isCI = process.env.CI === "1" || process.env.CI === "true";
+const pool = process.env.VITEST_POOL ?? (isCI ? "forks" : "threads");
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -25,6 +28,21 @@ export default defineConfig({
       ["app/src/**/*.test.tsx", "jsdom"],
       ["app/src/**/*.test.ts", "jsdom"],
     ],
+    pool,
+    poolOptions: {
+      threads: {
+        singleThread: isCI,
+      },
+      forks: {
+        singleFork: true,
+      },
+    },
+    minThreads: 1,
+    maxThreads: isCI ? 2 : undefined,
+    watch: false,
+    testTimeout: isCI ? 30000 : 10000,
+    hookTimeout: isCI ? 30000 : 10000,
+    slowTestThreshold: isCI ? 2000 : 1000,
     typecheck: {
       tsconfig: "tsconfig.vitest.json",
     },

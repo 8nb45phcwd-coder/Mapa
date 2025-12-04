@@ -9,8 +9,11 @@
     "app"
   ],
   "scripts": {
-    "build": "tsc -b",
-    "test": "vitest run",
+    "build": "npm run build:packages && npm run build:app",
+    "build:packages": "tsc -b",
+    "build:app": "npm --workspace app run build",
+    "test": "vitest run --config vitest.config.ts",
+    "test:ci": "WORLD_MAP_NO_NET=1 CI=1 vitest run --config vitest.config.ts --watch=false",
     "world-model:refresh": "npm --workspace world_model run refresh",
     "ingestion:refresh": "npm --workspace ingestion run refresh",
     "world-model:coverage": "npm --workspace world_model run coverage"

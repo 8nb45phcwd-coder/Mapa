@@ -13,6 +13,9 @@ This repository provides the **core engine**, not a full application. The codeba
 - `engine/`: rendering and layout kernel (previously the `src/` root).
 - `ingestion/`: real-world infrastructure ingestion (pipelines, cables, ports, nodes) with reprojection and clipping.
 - `world_model/`: placeholder for future country/world-system metadata (no logic yet).
+- `app/`: React/Vite viewer (available live at `https://<GITHUB_USERNAME>.github.io/Mapa/`).
+
+For how to run the test suite locally or in CI (including the offline flags used by automation), see [`TESTING.md`](./TESTING.md).
 
 ---
 
