@@ -1,4 +1,4 @@
-import schemesData from "../../base/data/schemes.json" assert { type: "json" };
+import schemesData from "../../base/data/schemes.json";
 import type { SchemeCatalog, SchemeDefinition } from "../types.js";
 
 const schemes: SchemeDefinition[] = (schemesData as SchemeCatalog).schemes;

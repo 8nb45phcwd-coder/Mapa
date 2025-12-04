@@ -1,4 +1,4 @@
-import borderSemanticsData from "../../base/data/border_semantics.json" assert { type: "json" };
+import borderSemanticsData from "../../base/data/border_semantics.json";
 import type { BorderSemanticCatalog, BorderSemanticEntry } from "../types.js";
 
 const catalog: BorderSemanticCatalog = borderSemanticsData as BorderSemanticCatalog;

@@ -1,4 +1,4 @@
-import languagesData from "../../base/data/languages.json" assert { type: "json" };
+import languagesData from "../../base/data/languages.json";
 import type { CountryId, LanguageCatalog, LanguageInfo } from "../types.js";
 
 const catalog: LanguageCatalog = languagesData as LanguageCatalog;

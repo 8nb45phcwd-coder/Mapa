@@ -6,7 +6,13 @@
     "declaration": true,
     "composite": true
   },
-  "include": ["src/**/*", "base/**/*", "marxist/**/*"],
+  "include": [
+    "src/**/*",
+    "base/**/*",
+    "marxist/**/*",
+    "base/data/**/*.json",
+    "marxist/data/**/*.json"
+  ],
   "exclude": ["dist", "node_modules"],
   "references": [{ "path": "../engine" }]
 }
