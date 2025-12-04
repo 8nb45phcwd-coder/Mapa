@@ -19,6 +19,11 @@ export default defineConfig({
       "engine/tests/**/*.test.ts",
       "ingestion/tests/**/*.test.ts",
       "world_model/tests/**/*.test.ts",
+      "app/src/**/*.test.{ts,tsx}",
+    ],
+    environmentMatchGlobs: [
+      ["app/src/**/*.test.tsx", "jsdom"],
+      ["app/src/**/*.test.ts", "jsdom"],
     ],
     typecheck: {
       tsconfig: "tsconfig.vitest.json",

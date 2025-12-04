@@ -1,5 +1,6 @@
 import * as base from "./base/index.js";
 import * as marxist from "./marxist/index.js";
+export * from "./coverage.js";
 export * from "./types.js";
 
 // Base layer APIs
