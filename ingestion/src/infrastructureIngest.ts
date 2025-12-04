@@ -269,22 +269,22 @@ function adaptPointFeatures(data: any, config: InfraSourceConfig): RawFeature[] 
   return results;
 }
 
-const adapterRegistry: Record<string, (data: any, config: InfraSourceConfig) => RawFeature[]> = {
+export const adapterRegistry: Record<string, (data: any, config: InfraSourceConfig) => RawFeature[]> = {
   geojson_line: adaptLineFeatures,
   geojson_point: adaptPointFeatures,
 };
 
-const defaultFixtureDir = new URL("../tests/fixtures/", import.meta.url);
+export const DEFAULT_FIXTURE_DIR = new URL("../fixtures/", import.meta.url);
 
-function resolveFixturePath(config: InfraSourceConfig, options: InfraIngestOptions): string {
+export function resolveFixturePath(config: InfraSourceConfig, options: InfraIngestOptions): string {
   const base = options.fixtureOverrideDir
     ? resolve(options.fixtureOverrideDir)
-    : fileURLToPath(defaultFixtureDir);
+    : fileURLToPath(DEFAULT_FIXTURE_DIR);
   const file = config.fixture ?? `${config.sourceId}.geojson`;
   return resolve(base, file);
 }
 
-function loadFixtureData(config: InfraSourceConfig, options: InfraIngestOptions): any {
+export function loadFixtureData(config: InfraSourceConfig, options: InfraIngestOptions): any {
   const path = resolveFixturePath(config, options);
   const raw = readFileSync(path, "utf-8");
   return JSON.parse(raw);
@@ -358,7 +358,7 @@ function isMajorOffshorePlatform(raw: RawFeatureNode): boolean {
   return false;
 }
 
-function filterStrategicSubset(rawFeatures: RawFeature[], config: InfraSourceConfig): RawFeature[] {
+export function filterStrategicSubset(rawFeatures: RawFeature[], config: InfraSourceConfig): RawFeature[] {
   switch (config.infraType) {
     case "pipeline_gas_strategic":
     case "pipeline_oil_strategic":
@@ -540,8 +540,14 @@ function fetchDataset(config: InfraSourceConfig, options: InfraIngestOptions): P
   if (options.sourceData && options.sourceData[config.sourceId]) {
     return Promise.resolve(options.sourceData[config.sourceId]);
   }
-  if (options.useFixturesOnly) {
-    return Promise.resolve(loadFixtureData(config, options));
+  const preferFixtures = options.useFixturesOnly ?? true;
+  if (preferFixtures) {
+    try {
+      return Promise.resolve(loadFixtureData(config, options));
+    } catch (err) {
+      if (options.useFixturesOnly) throw err;
+      // fall through to network fetch
+    }
   }
   const fetcher = options.fetcher ?? fetch;
   return fetcher(config.url).then((r: any) => {

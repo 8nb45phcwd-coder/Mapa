@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "TransMed Strategic Gas",
+        "infraType": "pipeline_gas_strategic",
+        "capacity_mmcfd": 1200,
+        "strategic": true,
+        "owner": "Mediterranean Gas Co.",
+        "operator": "MedGas Ops"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [3.0, 34.5],
+          [9.0, 36.8],
+          [12.5, 37.9]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "North Sea Oil Backbone",
+        "infraType": "pipeline_oil_strategic",
+        "throughput_bpd": 1500000,
+        "tier": "strategic",
+        "owner": "Nordic Oil",
+        "operator": "Nordic Oil"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [2.5, 58.5],
+          [4.5, 58.2],
+          [6.0, 57.5]
+        ]
+      }
+    }
+  ]
+}

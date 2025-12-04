@@ -1,0 +1,102 @@
+{
+  "gasPipelines": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "g1",
+          "name": "Alpha Gas Backbone",
+          "infraType": "pipeline_gas_strategic",
+          "capacity_mmcfd": 1800,
+          "owner": "Alpha Gas Co.",
+          "operator": "Alpha Ops"
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [10.1234567, 45.9876543],
+            [12.7654321, 47.1111111]
+          ]
+        }
+      }
+    ]
+  },
+  "oilPipelines": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "o1",
+          "name": "Zulu Oil Spine",
+          "infraType": "pipeline_oil_strategic",
+          "throughput_bpd": 2500000,
+          "owner": "Zulu Oil",
+          "operator": "Zulu Oil"
+        },
+        "geometry": {
+          "type": "LineString",
+          "coordinates": [
+            [1.9876543, 50.1234567],
+            [2.4444444, 51.9999999]
+          ]
+        }
+      }
+    ]
+  },
+  "nodes": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "p1",
+          "name": "Delta Container Port",
+          "infraType": "port_container_major",
+          "teu": 3000000,
+          "owner": "Delta Port Authority",
+          "operator": "Delta Logistics"
+        },
+        "geometry": { "type": "Point", "coordinates": [4.1234567, 51.9876543] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "a1",
+          "name": "Beta Cargo Hub",
+          "infraType": "airport_hub_major",
+          "cargo_tonnes": 700000,
+          "owner": "Beta Aviation",
+          "operator": "Beta Aviation"
+        },
+        "geometry": { "type": "Point", "coordinates": [8.3333333, 50.1111111] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "m1",
+          "name": "Gamma Critical Mine",
+          "infraType": "mine_critical_major",
+          "commodity": "lithium",
+          "output_tonnes": 150000,
+          "owner": "Gamma Minerals"
+        },
+        "geometry": { "type": "Point", "coordinates": [117.9876543, -22.7654321] }
+      },
+      {
+        "type": "Feature",
+        "properties": {
+          "id": "off1",
+          "name": "Omega Offshore Platform",
+          "infraType": "oil_gas_platform_offshore_major",
+          "offshore": true,
+          "production_bpd": 200000,
+          "owner": "Omega Energy",
+          "operator": "Omega Energy"
+        },
+        "geometry": { "type": "Point", "coordinates": [5.654321, 59.1234567] }
+      }
+    ]
+  }
+}

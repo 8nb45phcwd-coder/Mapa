@@ -14,8 +14,15 @@ Strategic infra types:
 - nodes: `port_container_major`, `oil_gas_platform_offshore_major`, `mine_critical_major`, `airport_hub_major`
 
 Deterministic mode:
-- set `useFixturesOnly: true` in `IngestionOptions` to load checked-in fixtures from `ingestion/tests/fixtures` (or override with `fixtureOverrideDir`)
+- By default ingestion loads fixtures from `ingestion/fixtures` and only fetches live data when you explicitly disable fixture loading.
+- set `useFixturesOnly: true` in `IngestionOptions` to load checked-in fixtures from `ingestion/fixtures` (or override with `fixtureOverrideDir`)
 - owner/operator metadata is preserved via `owner_raw` and `operator_raw` on nodes/segments for downstream semantics
+
+Refresh pipeline (manual, deterministic output):
+- Fixtures are versioned under `ingestion/fixtures` (default lookup for normal ingestion) and can be regenerated from live data with `npm run ingestion:refresh` from the repo root.
+- The refresh step fetches, filters to the strategic infra set, rounds coordinates, sorts by name/id, and writes stable GeoJSON fixtures.
+- To run against local samples or avoid network access, pass `sourceData`/`fetcher` overrides to `refreshStrategicInfrastructure` or place pre-fetched data in the expected fixture names before running with `overwrite: true`.
+- Add a new strategic infra type by extending `refreshInfraConfig` with a source descriptor, adapter, and output fixture target, then ensure filtering and fixtures/tests cover the new type.
 
 Notes:
 - Country masks default to the higher-fidelity world-atlas 50m dataset for assignment/clipping; lower-LOD (110m) can still be supplied explicitly.
