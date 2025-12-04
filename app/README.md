@@ -27,3 +27,5 @@ Other scripts:
 - The app is **offline/deterministic by default**: infrastructure is loaded from fixtures on startup for reproducible runs.
 - Optional live infrastructure refresh is opt-in only. To enable the toggle, set `VITE_ALLOW_LIVE_INFRA=true` in your environment, then switch it on in the UI (expect slower, non-deterministic, network-dependent behaviour). Fixtures remain the default.
 - The engine and ingestion behaviour are unchanged; the app only orchestrates rendering and data wiring.
+- App-level tests cover fixture-only infrastructure loading, layout mode switching (geo/concept/hybrid), and layer toggle wiring to
+  keep state transitions deterministic.

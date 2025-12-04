@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 import React from "react";
-import { fireEvent, render, waitFor } from "@testing-library/react";
-import { vi, describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
 const { mockLoadAllInfrastructure, MOCK_TOPO } = vi.hoisted(() => ({
@@ -71,19 +71,19 @@ vi.mock("world-map-engine", () => {
       _topology: any,
       country: { country_id: string },
       _projection: any
-      ) => ({
-        country_id: country.country_id,
-        polygon: { type: "Polygon", coordinates: [[[0, 0]]] },
-        transform: IDENTITY_TRANSFORM,
+    ) => ({
+      country_id: country.country_id,
+      polygon: { type: "Polygon", coordinates: [[[0, 0]]] },
+      transform: IDENTITY_TRANSFORM,
+      centroid_concept: [0, 0],
+      centroid_geo: [0, 0],
+      screen_pos: [0, 0],
+      conceptual_pos: [0, 0],
+      anchor_geo: {
         centroid_concept: [0, 0],
         centroid_geo: [0, 0],
-        screen_pos: [0, 0],
-        conceptual_pos: [0, 0],
-        anchor_geo: {
-          centroid_concept: [0, 0],
-          centroid_geo: [0, 0],
-        },
-        anchor: {
+      },
+      anchor: {
         centroid_concept: [0, 0],
         centroid_geo: [0, 0],
       },
@@ -169,55 +169,50 @@ vi.mock("d3-geo", () => ({
   },
 }));
 
-describe("App infrastructure loading", () => {
-  beforeEach(() => {
-    mockLoadAllInfrastructure.mockClear();
-    delete process.env.VITE_ALLOW_LIVE_INFRA;
-  });
+beforeEach(() => {
+  mockLoadAllInfrastructure.mockClear();
+});
 
-  it("requests fixture-only infrastructure by default", async () => {
+describe("App integration wiring", () => {
+  it("switches layout modes via the controls", async () => {
     render(<App />);
 
+    const geoRadio = screen.getByLabelText(/Geographic/i) as HTMLInputElement;
+    const conceptRadio = screen.getByLabelText(/Concept/i) as HTMLInputElement;
+    const hybridRadio = screen.getByLabelText(/Hybrid/i) as HTMLInputElement;
+
     await waitFor(() => {
-      expect(mockLoadAllInfrastructure).toHaveBeenCalled();
+      expect(screen.getByTestId("layout-mode-label").textContent).toContain("geo");
     });
 
-    expect(mockLoadAllInfrastructure).toHaveBeenCalledTimes(1);
-    expect(mockLoadAllInfrastructure).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ useFixturesOnly: true })
-    );
+    fireEvent.click(conceptRadio);
+    expect(conceptRadio.checked).toBe(true);
+    expect(screen.getByTestId("layout-mode-label").textContent).toContain("concept");
+
+    fireEvent.click(hybridRadio);
+    expect(hybridRadio.checked).toBe(true);
+    expect(screen.getByTestId("layout-mode-label").textContent).toContain("hybrid");
+
+    fireEvent.click(geoRadio);
+    expect(geoRadio.checked).toBe(true);
+    expect(screen.getByTestId("layout-mode-label").textContent).toContain("geo");
   });
 
-  it("only switches to live infrastructure when explicitly enabled", async () => {
-    process.env.VITE_ALLOW_LIVE_INFRA = "true";
+  it("toggles layer state and reflects it in debug labels", async () => {
+    render(<App />);
 
-    const { getByLabelText } = render(<App />);
+    const pipelinesToggle = await screen.findByLabelText(/pipelines/i);
+    const pipelinesStatus = screen.getByTestId("layer-pipelines-state");
 
-    await waitFor(() => {
-      expect(mockLoadAllInfrastructure).toHaveBeenCalledTimes(1);
-    });
+    expect((pipelinesToggle as HTMLInputElement).checked).toBe(true);
+    expect(pipelinesStatus.textContent).toContain("on");
 
-    expect(mockLoadAllInfrastructure).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ useFixturesOnly: true })
-    );
+    fireEvent.click(pipelinesToggle);
+    expect((pipelinesToggle as HTMLInputElement).checked).toBe(false);
+    expect(pipelinesStatus.textContent).toContain("off");
 
-    mockLoadAllInfrastructure.mockClear();
-
-    const liveToggle = getByLabelText(/Use live infrastructure data/i);
-    fireEvent.click(liveToggle);
-
-    await waitFor(() => {
-      expect(mockLoadAllInfrastructure).toHaveBeenCalledTimes(1);
-    });
-
-    expect(mockLoadAllInfrastructure).toHaveBeenLastCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.objectContaining({ useFixturesOnly: false })
-    );
+    fireEvent.click(pipelinesToggle);
+    expect((pipelinesToggle as HTMLInputElement).checked).toBe(true);
+    expect(pipelinesStatus.textContent).toContain("on");
   });
 });

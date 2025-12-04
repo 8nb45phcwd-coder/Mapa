@@ -718,6 +718,9 @@ const App: React.FC = () => {
           />
           Hybrid
         </label>
+        <div data-testid="layout-mode-label" className="status-row">
+          Mode: {layoutMode}
+        </div>
         {layoutMode === "hybrid" && (
           <label>
             Alpha: {hybridAlpha.toFixed(2)}
@@ -768,6 +771,13 @@ const App: React.FC = () => {
               onChange={() => setLayers((prev) => ({ ...prev, [key]: !prev[key as keyof typeof layers] }))}
             />
             {key}
+            <span
+              className="status-row"
+              data-testid={`layer-${key}-state`}
+              style={{ marginLeft: 8 }}
+            >
+              {value ? "on" : "off"}
+            </span>
           </label>
         ))}
 
