@@ -1,4 +1,4 @@
-import tagsData from "../../marxist/data/tags.json" assert { type: "json" };
+import tagsData from "../../marxist/data/tags.json";
 import type { CountryId, MarxistTagEntry, MarxistTagMap } from "../types.js";
 import { getMarxistSchemeById } from "./schemes.js";
 

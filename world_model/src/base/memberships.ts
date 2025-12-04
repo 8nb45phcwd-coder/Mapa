@@ -1,4 +1,4 @@
-import membershipsData from "../../base/data/memberships.json" assert { type: "json" };
+import membershipsData from "../../base/data/memberships.json";
 import type {
   CountryId,
   CountryTags,

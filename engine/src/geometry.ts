@@ -103,7 +103,7 @@ export async function loadHighResCountryMaskIndex(
   let world = preloaded;
   if (!world) {
     try {
-      const mod = await import(`world-atlas/countries-${resolution}.json`, { assert: { type: "json" } } as any);
+      const mod = await import(`world-atlas/countries-${resolution}.json`);
       world = (mod as any).default ?? mod;
     } catch (err) {
       const loader = options.fetcher ?? fetch;

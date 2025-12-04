@@ -32,7 +32,7 @@ export function selectLOD(zoom: number): LODLevelName {
 
 async function loadLocalAtlas(resolution: string): Promise<any | undefined> {
   try {
-    const mod = await import(`world-atlas/countries-${resolution}.json`, { assert: { type: "json" } } as any);
+    const mod = await import(`world-atlas/countries-${resolution}.json`);
     return (mod as any).default ?? mod;
   } catch (err) {
     return undefined;

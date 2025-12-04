@@ -1,4 +1,4 @@
-import countriesData from "../../base/data/countries.json" assert { type: "json" };
+import countriesData from "../../base/data/countries.json";
 import type { CountryId, CountryMeta } from "../types.js";
 
 const countries: CountryMeta[] = (countriesData as { countries: CountryMeta[] }).countries;
