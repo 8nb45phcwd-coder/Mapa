@@ -8,6 +8,10 @@ const LOD_RESOLUTIONS: Record<LODLevelName, string> = {
   high: "10m",
 };
 
+function isNetworkDisabled(): boolean {
+  return typeof process !== "undefined" && process.env?.WORLD_MAP_NO_NET === "1";
+}
+
 export interface LoadLODOptions {
   fetcher?: typeof fetch;
   preloaded?: Record<string, any>;
@@ -49,6 +53,9 @@ export async function loadGeometryForLOD(level: LodLevel, options: LoadLODOption
   const local = await loadLocalAtlas(resolution);
   if (local) {
     return { level: name, resolution, topojson: local };
+  }
+  if (isNetworkDisabled()) {
+    throw new Error("Network fetches are disabled (WORLD_MAP_NO_NET=1)");
   }
   const fetcher = options.fetcher ?? fetch;
   const url = `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-${resolution}.json`;

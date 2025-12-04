@@ -12,6 +12,10 @@ import type {
 } from "./types.js";
 import capitalAnchors from "./data/capital-coordinates.json";
 
+function isNetworkDisabled(): boolean {
+  return typeof process !== "undefined" && process.env?.WORLD_MAP_NO_NET === "1";
+}
+
 const normalizedCapitalAnchors = (() => {
   const norm = new Map<string, [number, number]>();
   const anchorSource = capitalAnchors as unknown as Record<string, [number, number]>;
@@ -38,6 +42,9 @@ export async function loadWorld110m(): Promise<any> {
 
 /** Load a world-atlas dataset by resolution key (e.g., "50m" or "110m"). */
 export async function loadWorldDataset(resolution: "50m" | "110m" | string): Promise<any> {
+  if (isNetworkDisabled()) {
+    throw new Error("Network fetches are disabled (WORLD_MAP_NO_NET=1)");
+  }
   const url = `https://cdn.jsdelivr.net/npm/world-atlas@2/countries-${resolution}.json`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -106,6 +113,9 @@ export async function loadHighResCountryMaskIndex(
       const mod = await import(`world-atlas/countries-${resolution}.json`);
       world = (mod as any).default ?? mod;
     } catch (err) {
+      if (isNetworkDisabled()) {
+        throw new Error("Network fetches are disabled (WORLD_MAP_NO_NET=1)");
+      }
       const loader = options.fetcher ?? fetch;
       const res = await loader(`https://cdn.jsdelivr.net/npm/world-atlas@2/countries-${resolution}.json`);
       if (!res.ok) throw new Error(`Failed to load high-res world ${resolution}: ${res.statusText}`);
@@ -117,6 +127,9 @@ export async function loadHighResCountryMaskIndex(
 
 /** Load TopoJSON from an arbitrary URL. */
 export async function loadTopoJSON(url: string): Promise<any> {
+  if (isNetworkDisabled()) {
+    throw new Error("Network fetches are disabled (WORLD_MAP_NO_NET=1)");
+  }
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to load TopoJSON from ${url}: ${res.statusText}`);
