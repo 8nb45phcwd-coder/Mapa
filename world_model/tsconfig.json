@@ -14,6 +14,5 @@
     "base/data/**/*.json",
     "marxist/data/**/*.json"
   ],
-  "exclude": ["dist", "node_modules"],
-  "references": [{ "path": "../engine" }]
+  "exclude": ["dist", "node_modules", "base/fetch/refresh.js"]
 }

@@ -23,6 +23,8 @@ npm run world-model:refresh
 
 This will fetch external membership lists where URLs are provided, fall back to existing fixtures if offline, and rewrite `base/data/memberships.json`.
 
+The fetch logic in `base/fetch/refresh.js` is intended for manual or CI-only runs. It hits external CSV/JSON endpoints and is excluded from the TypeScript project via `tsconfig.json` so library builds only consume the checked-in fixtures under `base/data`. Tests rely solely on local data and do not invoke the refresh step.
+
 ## Testing
 `npm test` from the repo root covers:
 - base data integrity (countries, schemes, memberships, language coverage, border semantics),

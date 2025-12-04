@@ -19,3 +19,12 @@ Core rendering and layout kernel for the world-map stack. Responsibilities:
 - `getBorderSegmentGeometryForLOD` delegates to the shared `selectLOD` zoom thresholds (low < 1.5, medium/high ≥ 1.5) and returns low-res geometry when available, falling back to hi-res otherwise. Every segment always returns non-empty hi-res coordinates.
 
 The engine consumes infrastructure and future world-model metadata provided by sibling packages; it does **not** fetch or parse provider datasets itself.
+
+## Network access and offline usage
+
+- `loadWorldDataset`, `loadDefaultWorld`, and `loadWorld110m` load world-atlas TopoJSON from the CDN when local assets are not preloaded.
+- `loadGeometryForLOD` attempts to import the world-atlas package; if that fails and no `preloaded` data is supplied it falls back to fetching from the CDN.
+- `loadHighResCountryMaskIndex` behaves similarly for the 10m cut, using `preloaded` data first, then a local import, then a CDN fetch.
+- `loadTopoJSON` always performs a fetch to the provided URL.
+
+For CI or offline runs, ensure world-atlas JSON files are available locally (via the dependency or `preloaded` options) or set `WORLD_MAP_NO_NET=1` to hard-stop network fetches and surface an explicit error instead of falling back to remote URLs.

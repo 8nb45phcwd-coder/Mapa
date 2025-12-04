@@ -51,6 +51,7 @@ export {
   createCameraState,
   applyZoom,
   applyPan,
+  applyCameraToPoint,
   geoToScreen,
   screenToGeo,
   cameraViewport,
