@@ -15,3 +15,6 @@ Tests, public API shapes, and ingestion behaviour remain unchanged aside from mo
 - Removed the unused `world-map-engine` dependency from `world_model` to decouple build graph expectations.
 - Documented network fetch fallbacks for engine loaders and added an opt-out guard via `WORLD_MAP_NO_NET=1` for offline/CI runs.
 - Verified `npm test` and `npm run build` at the repository root.
+- Added resilient load state handling and retry UI in the app so topology/LOD failures surface as on-screen errors instead of unmounting the tree.
+- Bundled TopoJSON and infrastructure fixtures under `app/public/` and updated loaders to resolve via `import.meta.env.BASE_URL` before attempting any network requests.
+- Added jsdom/Node tests that mock offline and fixture failure scenarios to validate that topology falls back cleanly and infrastructure fetch errors are reported without crashing.

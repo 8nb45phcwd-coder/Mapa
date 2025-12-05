@@ -85,6 +85,44 @@ type SchemeGroupSelection = {
   groups: Set<string>;
 };
 
+type LoadState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ok" }
+  | { status: "error"; message: string };
+
+class ViewerErrorBoundary extends React.Component<
+  React.PropsWithChildren<{}>,
+  { hasError: boolean; message?: string }
+> {
+  constructor(props: React.PropsWithChildren<{}>) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error.message };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error("Viewer crashed", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-panel">
+          <h2>Something went wrong</h2>
+          <p>We hit an unexpected error. Try reloading the page.</p>
+          {this.state.message && <pre>{this.state.message}</pre>}
+          <button onClick={() => window.location.reload()}>Reload</button>
+        </div>
+      );
+    }
+    return this.props.children as React.ReactElement;
+  }
+}
+
 interface HitResult {
   countryId?: string;
   segmentId?: string;
@@ -216,7 +254,7 @@ const App: React.FC = () => {
     schemeId: "world_system_position",
     groups: new Set<string>(),
   });
-  const [loading, setLoading] = useState(true);
+  const [loadState, setLoadState] = useState<LoadState>({ status: "idle" });
 
   const baseCountries = useMemo(() => getBaseCountries(), []);
   const baseSchemes = useMemo(() => getBaseSchemes(), []);
@@ -319,9 +357,10 @@ const App: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  const runInitialLoad = useCallback(
+    async (cancelFlag: { current: boolean }) => {
+      setLoadState({ status: "loading" });
+      setInfraStatus("idle");
       try {
         const lodName = selectLOD(camera.zoom);
         const mediumTopo = await ensureLodGeometry(lodName);
@@ -330,15 +369,15 @@ const App: React.FC = () => {
           baseCountries
         );
         const projectionFn = geoMercator().fitSize([viewport.width, viewport.height], fc as any);
+        if (cancelFlag.current) return;
         setCountries(countryList);
         setFeatureCollection(fc);
         setLodLevel(lodName);
-        setLoading(false);
         rebuildShapes(mediumTopo, lodName, countryList, fc, projectionFn);
 
-        // Border index prep
         const highTopo = await ensureLodGeometry("high");
         const lowTopo = await ensureLodGeometry("low");
+        if (cancelFlag.current) return;
         initializeBorderIndex({ countries: countryList, topojsonHigh: highTopo, topojsonLow: lowTopo });
         setBorderSegments(getAllBorderSegments());
         const semantics = new Map<string, string[]>();
@@ -347,46 +386,73 @@ const App: React.FC = () => {
         });
         setBorderSemanticsMap(semantics);
 
-        // Infrastructure
         setInfraStatus(useLiveInfrastructure ? "loading_live" : "loading_fixtures");
+        let infraRes: IngestedInfrastructure | null = null;
         try {
-          const infraRes = await loadAllInfrastructure(highTopo, countryList, {
+          infraRes = await loadAllInfrastructure(highTopo, countryList, {
             countryIndex: undefined,
             useFixturesOnly: !useLiveInfrastructure,
           });
-          if (!cancelled) {
-            setInfra(infraRes);
-            setInfraStatus("ready");
-          }
         } catch (err) {
           console.error("Infrastructure load failed", err);
-          if (!cancelled) setInfraStatus("error");
+        }
+        if (!cancelFlag.current) {
+          if (infraRes) {
+            setInfra(infraRes);
+            setInfraStatus(infraRes.errors && infraRes.errors.length ? "error" : "ready");
+          } else {
+            setInfraStatus("error");
+          }
+          setLoadState({ status: "ok" });
         }
       } catch (err) {
-        console.error(err);
+        console.error("Initial load failed", err);
+        if (!cancelFlag.current) {
+          setLoadState({
+            status: "error",
+            message: "Failed to load base map data. Check your connection and click Retry.",
+          });
+        }
       }
-    })();
+    },
+    [
+      baseCountries,
+      camera.zoom,
+      ensureLodGeometry,
+      rebuildShapes,
+      useLiveInfrastructure,
+      viewport.height,
+      viewport.width,
+    ]
+  );
+
+  useEffect(() => {
+    const cancelFlag = { current: false };
+    runInitialLoad(cancelFlag);
     return () => {
-      cancelled = true;
+      cancelFlag.current = true;
     };
-  }, [
-    baseCountries,
-    camera.zoom,
-    ensureLodGeometry,
-    rebuildShapes,
-    useLiveInfrastructure,
-    viewport.height,
-    viewport.width,
-  ]);
+  }, [runInitialLoad]);
+
+  const retryLoad = useCallback(() => {
+    runInitialLoad({ current: false });
+  }, [runInitialLoad]);
 
   useEffect(() => {
     if (!countries.length || !featureCollection) return;
     const targetLod = selectLOD(camera.zoom);
     if (targetLod === lodLevel) return;
-    ensureLodGeometry(targetLod).then((topo) => {
-      rebuildShapes(topo, targetLod, countries, featureCollection);
-      setLodLevel(targetLod);
-    });
+    const switchLod = async () => {
+      try {
+        const topo = await ensureLodGeometry(targetLod);
+        rebuildShapes(topo, targetLod, countries, featureCollection);
+        setLodLevel(targetLod);
+      } catch (err) {
+        console.error("Failed to switch LOD", err);
+        setLoadState({ status: "error", message: "Couldn\u2019t switch LOD, staying on previous resolution." });
+      }
+    };
+    switchLod();
   }, [camera.zoom, countries, ensureLodGeometry, featureCollection, lodLevel, rebuildShapes]);
 
   useEffect(() => {
@@ -672,8 +738,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="app-shell">
-      <div className="panel controls">
+    <ViewerErrorBoundary>
+      <div className="app-shell">
+        {loadState.status === "error" && (
+          <div className="error-panel" role="alert">
+            <h3>Load error</h3>
+            <p>{loadState.message}</p>
+            <button onClick={retryLoad}>Retry</button>
+          </div>
+        )}
+        <div className="panel controls">
         <h3>Camera</h3>
         <label>
           Zoom: {camera.zoom.toFixed(2)}
@@ -785,6 +859,11 @@ const App: React.FC = () => {
         <div className="status-row">
           Infra: {infraStatus} ({useLiveInfrastructure ? "live (opt-in)" : "fixtures/offline"})
         </div>
+        {infraStatus === "error" && (
+          <div className="status-row" role="alert">
+            Failed to load infrastructure fixtures. Pipelines/ports/mines layers are disabled.
+          </div>
+        )}
         {allowLiveInfrastructure ? (
           <label className="layer-toggle">
             <input
@@ -799,7 +878,7 @@ const App: React.FC = () => {
             Infrastructure uses fixture data by default for offline-deterministic runs.
           </p>
         )}
-        {loading && <div className="status-row">Loading world data…</div>}
+        {loadState.status === "loading" && <div className="status-row">Loading world data…</div>}
       </div>
 
       <div className="panel" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
@@ -939,6 +1018,7 @@ const App: React.FC = () => {
         <p>WTO members tracked: {getBaseSchemeMembers("financial_structures", "wto_member").length}</p>
       </div>
     </div>
+    </ViewerErrorBoundary>
   );
 };
 
