@@ -46,6 +46,7 @@ export interface IngestedInfrastructure {
   internalSegments: ClippedInfrastructureLine[];
   transnationalSegments: TransnationalInfrastructureLine[];
   nodes: InfrastructureNode[];
+  errors?: string[];
 }
 
 // Default sources target authoritative or semi-authoritative global datasets; callers can override via `configs`
@@ -295,9 +296,14 @@ export async function loadFixtureData(
   }
 
   // Browser branch: fetch fixtures as static assets bundled by Vite.
+  const baseFromEnv =
+    (typeof import.meta !== "undefined" ? (import.meta as any)?.env?.BASE_URL : undefined) ??
+    process.env?.VITE_BASE_URL ??
+    "/";
+  const base = baseFromEnv.endsWith("/") ? baseFromEnv : `${baseFromEnv}/`;
   const baseUrl = options.fixtureOverrideDir
     ? new URL(options.fixtureOverrideDir, DEFAULT_FIXTURE_DIR)
-    : DEFAULT_FIXTURE_DIR;
+    : new URL(`${base}fixtures/`, typeof window !== "undefined" ? window.location.href : DEFAULT_FIXTURE_DIR);
   const url = new URL(file, baseUrl);
   const response = await fetch(url.toString());
   if (!response.ok) {
@@ -552,24 +558,34 @@ function clipInternalLine(
   return clipped.clipped_segments.length === 0 ? null : clipped;
 }
 
-async function fetchDataset(config: InfraSourceConfig, options: InfraIngestOptions): Promise<any> {
+async function fetchDataset(
+  config: InfraSourceConfig,
+  options: InfraIngestOptions
+): Promise<{ data?: any; error?: string }> {
   if (options.sourceData && options.sourceData[config.sourceId]) {
-    return Promise.resolve(options.sourceData[config.sourceId]);
+    return Promise.resolve({ data: options.sourceData[config.sourceId] });
   }
   const preferFixtures = options.useFixturesOnly ?? true;
   if (preferFixtures) {
     try {
-      return await loadFixtureData(config, options);
+      const data = await loadFixtureData(config, options);
+      return { data };
     } catch (err) {
-      if (options.useFixturesOnly) throw err;
-      // fall through to network fetch
+      const message = err instanceof Error ? err.message : String(err);
+      if (options.useFixturesOnly) return { error: message };
     }
   }
   const fetcher = options.fetcher ?? fetch;
-  return fetcher(config.url).then((r: any) => {
-    if (!r.ok) throw new Error(`Failed to fetch ${config.url}: ${r.status}`);
-    return r.json();
-  });
+  if (options.useFixturesOnly && typeof fetcher === "undefined") {
+    return { error: "No fetcher available and fixtures are required" };
+  }
+  try {
+    const response = await fetcher(config.url);
+    if (!response?.ok) throw new Error(`Failed to fetch ${config.url}: ${response?.status}`);
+    return { data: await response.json() };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 /**
@@ -589,12 +605,17 @@ export async function ingestInfrastructure(
   const internalSegments: ClippedInfrastructureLine[] = [];
   const transnationalSegments: TransnationalInfrastructureLine[] = [];
   const nodes: InfrastructureNode[] = [];
+  const errors: string[] = [];
   const coastalTolerance = options.coastalToleranceKm ?? 30;
 
   for (const config of configs) {
     const adapter = adapterRegistry[config.adapter];
     if (!adapter) throw new Error(`Adapter ${config.adapter} not registered`);
-    const data = await fetchDataset(config, options);
+    const { data, error } = await fetchDataset(config, options);
+    if (error || !data) {
+      errors.push(`${config.sourceId}: ${error ?? "No data returned"}`);
+      continue;
+    }
     const prepared = config.preprocess ? config.preprocess(data) : data;
     const rawFeatures = filterStrategicSubset(adapter(prepared, config), config);
     rawFeatures.forEach((raw) => {
@@ -628,7 +649,7 @@ export async function ingestInfrastructure(
     });
   }
 
-  return { internalSegments, transnationalSegments, nodes };
+  return { internalSegments, transnationalSegments, nodes, errors };
 }
 
 export function ensureNodeWithinCountry(

@@ -4,7 +4,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 
-const { mockLoadAllInfrastructure, MOCK_TOPO } = vi.hoisted(() => ({
+const { mockLoadAllInfrastructure, MOCK_TOPO, loadGeometryForLODMock } = vi.hoisted(() => ({
   mockLoadAllInfrastructure: vi.fn(async () => ({
     internalSegments: [],
     transnationalSegments: [],
@@ -35,6 +35,7 @@ const { mockLoadAllInfrastructure, MOCK_TOPO } = vi.hoisted(() => ({
       },
     },
   },
+  loadGeometryForLODMock: vi.fn(async () => ({ topojson: MOCK_TOPO })),
 }));
 
 vi.mock("world-map-ingestion", () => ({
@@ -89,7 +90,7 @@ vi.mock("world-map-engine", () => {
       },
     }),
     selectLOD: () => "high",
-    loadGeometryForLOD: vi.fn(async () => ({ topojson: MOCK_TOPO })),
+    loadGeometryForLOD: loadGeometryForLODMock,
     projectInfrastructureLine: (line: any) => ({
       ...line,
       geometry_projected: line.geometry_geo ?? [],
@@ -171,6 +172,7 @@ vi.mock("d3-geo", () => ({
 
 beforeEach(() => {
   mockLoadAllInfrastructure.mockClear();
+  loadGeometryForLODMock.mockClear();
 });
 
 describe("App integration wiring", () => {
@@ -214,5 +216,31 @@ describe("App integration wiring", () => {
     fireEvent.click(pipelinesToggle);
     expect((pipelinesToggle as HTMLInputElement).checked).toBe(true);
     expect(pipelinesStatus.textContent).toContain("on");
+  });
+
+  it("surfaces an error when topology fails to load", async () => {
+    loadGeometryForLODMock.mockRejectedValueOnce(new Error("topology missing"));
+
+    render(<App />);
+
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Failed to load base map data");
+    expect(screen.getByRole("button", { name: /Retry/i })).toBeTruthy();
+  });
+
+  it("keeps the map usable when infrastructure fixtures fail", async () => {
+    mockLoadAllInfrastructure.mockResolvedValueOnce({
+      internalSegments: [],
+      transnationalSegments: [],
+      nodes: [],
+      errors: ["fixture 404"],
+    });
+
+    render(<App />);
+
+    await screen.findByText(/Infra:/);
+
+    const infraAlert = screen.getByRole("alert");
+    expect(infraAlert.textContent).toContain("Failed to load infrastructure fixtures");
   });
 });
